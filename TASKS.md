@@ -235,6 +235,8 @@ Once Ved's `backend/app.py` is merged to main, add `GET /api/trend/{cell_id}` an
 - Crop names are `wheat`, `soybean`, `corn`. Model 1 and GAEZ say `maize`, and some docs say `soy`. `rotation.py` maps `maize` to `corn` and `soy` to `soybean`.
 - Input is the dict that `suitability.score_crops(profile, scenario)` returns. Each crop has `percent` (a number, or `None` if not scored) and `source`.
 - `rotation.rank_rotations(suitability, scenario="normal")` returns a list of rotations. Each has `name`, `crops`, `status` (`scored`, `not scored`, or `pending rules`), `not_scored_crops`, `overall_percent` (or `None`), `breakdown`, `yield_bu_ac` per crop (or `UNVERIFIED`), `revenue_per_ac` (or `price not chosen`) and a `label` (LIVE, CACHED or SAMPLE).
+- Each crop also has `scenario_applied`. In dry and 2035 views it is `false` for a crop with no verified range (maize for now). Its number is then the GAEZ baseline, labelled "GAEZ baseline, dry scenario not applied". `rank_rotations` must pass this through so a rotation using that crop is shown as partly baseline.
+- GAEZ values are the Suitability Index (0 to 100, rain-fed high input, 2001-2020), not a literal percent. Range fit is a different scale. See `data/seed/gaez_harrow_NOTES.md`.
 - A rotation containing a crop with no percent is `not scored`. It is never dropped and never given an invented score.
 - `app.py` (Ved) only calls `rank_rotations`. Only Vedant edits `rotation.py`. Only Ved edits `suitability.py`.
 - The `scenario` option goes to Model 1. Model 2 does not change it.

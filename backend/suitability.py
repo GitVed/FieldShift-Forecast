@@ -87,51 +87,65 @@ def range_fit(crop, profile):
     return 100.0 * sum(checks) / len(checks)
 
 
+GAEZ_LABEL = "GAEZ SI 0-100, rain-fed high input, 2001-2020"
+DRY_BASELINE_LABEL = "GAEZ baseline, dry scenario not applied"
+
+
 def score_crops(profile, scenario="normal", gaez=None):
-    """Return {crop: dict(percent, source, gaez_baseline, note)}.
+    """Return {crop: dict(percent, source, gaez_baseline, scenario_applied, note)}.
+
+    "percent" is a 0 to 100 score. For GAEZ it is the Suitability Index (SI),
+    not a literal percent.
 
     normal: GAEZ if available, else range fit, else not scored.
-    dry / 2035_dry: range fit only. GAEZ is shown as baseline, not the score.
+    dry / 2035_dry: range fit drives the score. If a crop has no range (maize
+    for now), show the GAEZ baseline with scenario_applied False, clearly
+    labelled. Never invent a range. If neither exists, not scored.
     """
     gaez = load_gaez() if gaez is None else gaez
     result = {}
     for crop in CROPS:
         fit = range_fit(crop, profile)
         base = gaez.get(crop)
+        applied = True
         if scenario == "normal" and base is not None:
-            pct, src = base, "GAEZ"
+            pct, src = base, GAEZ_LABEL
         elif fit is not None:
             pct, src = fit, "range fallback (UNVERIFIED OMAFRA ranges)"
+        elif base is not None:
+            pct, src, applied = base, DRY_BASELINE_LABEL, False
         else:
             pct, src = None, None
         note = ""
         if pct is None:
             note = "NOT SCORED. No GAEZ value and no range."
-            if crop == "maize":
-                note += " Kaggle maize path not built yet."
-        result[crop] = {"percent": pct, "source": src, "gaez_baseline": base, "note": note}
+        elif not applied:
+            note = "Scenario not applied. Needs a verified OMAFRA range (Vedant, VS1)."
+        result[crop] = {"percent": pct, "source": src, "gaez_baseline": base,
+                        "scenario_applied": applied, "note": note}
     return result
 
 
 def main():
     profile = SAMPLE_PROFILE
     print(f"Model 1 suitability stub. Profile: {profile['label']}")
-    print("Inputs used: temp_c, rain_mm, ph (others not wired yet). No P or K.\n")
-    res = score_crops(profile, "normal")
-    for crop in CROPS:
-        r = res[crop]
-        base = "n/a" if r["gaez_baseline"] is None else f"{r['gaez_baseline']:.0f}"
-        if r["percent"] is None:
-            print(f"{crop:8} NOT SCORED   GAEZ baseline: {base}   {r['note']}")
-        else:
-            print(f"{crop:8} {r['percent']:5.0f} %      GAEZ baseline: {base}   source: {r['source']}   [{profile['label']}]")
-    not_scored = [c for c in CROPS if res[c]["percent"] is None]
-    print()
-    if not_scored:
-        print("Not scored:", ", ".join(not_scored))
-    else:
-        print("All crops scored.")
-    print("Any rotation containing a not-scored crop must be shown as 'not scored'.")
+    print("Inputs used: temp_c, rain_mm, ph (others not wired yet). No P or K.")
+    print("Scores are 0 to 100. GAEZ values are the Suitability Index, not a percent.")
+    for scenario in ("normal", "dry"):
+        print(f"\nScenario: {scenario}")
+        res = score_crops(profile, scenario)
+        for crop in CROPS:
+            r = res[crop]
+            if r["percent"] is None:
+                print(f"  {crop:8} NOT SCORED   {r['note']}")
+            else:
+                print(f"  {crop:8} {r['percent']:5.1f}   source: {r['source']}   [{profile['label']}]")
+        not_scored = [c for c in CROPS if res[c]["percent"] is None]
+        unapplied = [c for c in CROPS if res[c]["percent"] is not None and not res[c]["scenario_applied"]]
+        print("  Not scored:", ", ".join(not_scored) if not_scored else "none")
+        if unapplied:
+            print("  Scenario not applied (baseline shown):", ", ".join(unapplied))
+    print("\nAny rotation containing a not-scored crop must be shown as 'not scored'.")
 
 
 if __name__ == "__main__":

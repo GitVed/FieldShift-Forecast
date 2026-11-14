@@ -1,0 +1,225 @@
+{
+  "meta": {
+    "status": "SAMPLE",
+    "description": "UI fixture only. Not observed NASA data, field survey, or verified predictions.",
+    "updated": "2026-11-14",
+    "sources": {
+      "trial": "AAFC Harrow/Woodslee rotation trial (figures transcribed from team brief; pending independent verification)",
+      "climate": "SAMPLE, not from NASA",
+      "prices": "Not supplied by team"
+    }
+  },
+  "pilot": {
+    "field_id": "harrow",
+    "cell_id": "harrow-power",
+    "name": "Harrow / Woodslee pilot",
+    "region": "Essex County, Ontario",
+    "soil": "Brookston clay loam (team trial description)",
+    "center": {
+      "lat": 42.04,
+      "lon": -82.92
+    },
+    "coordinate_status": "SAMPLE: approximate Harrow area; not an actual farm boundary",
+    "polygon": [
+      [
+        42.045,
+        -82.93
+      ],
+      [
+        42.045,
+        -82.916
+      ],
+      [
+        42.035,
+        -82.916
+      ],
+      [
+        42.035,
+        -82.93
+      ]
+    ],
+    "layers": {
+      "harrow-field": {
+        "status": "SAMPLE",
+        "description": "Illustrative rectangle, NOT an identified field"
+      },
+      "trend-grid-cell": {
+        "status": "SAMPLE",
+        "description": "Illustrative grid footprint, NOT the resolved NASA POWER cell"
+      },
+      "north-comparison-grid-cell": {
+        "status": "SAMPLE",
+        "description": "Illustrative comparison region, NOT verified buddy cell"
+      },
+      "sentinel2-ndvi": {
+        "status": "SAMPLE",
+        "description": "No satellite NDVI raster supplied"
+      }
+    }
+  },
+  "detect": {
+    "status": "SAMPLE",
+    "confidence": "Not assessed",
+    "buddy_check": "Not assessed",
+    "verdict": "Historical field trend not yet calculated",
+    "trends": [
+      {
+        "id": "temperature",
+        "name": "Summer temperature",
+        "value": null,
+        "unit": "°C / decade",
+        "p_value": null,
+        "status": "SAMPLE",
+        "source": "Awaiting NASA POWER + Mann-Kendall test"
+      },
+      {
+        "id": "rainfall",
+        "name": "Growing-season rainfall",
+        "value": null,
+        "unit": "mm / decade",
+        "p_value": null,
+        "status": "SAMPLE",
+        "source": "Awaiting NASA POWER or IMERG + trend test"
+      },
+      {
+        "id": "soil_moisture",
+        "name": "July soil moisture",
+        "value": null,
+        "unit": "m³/m³ / decade",
+        "p_value": null,
+        "status": "SAMPLE",
+        "source": "Awaiting SMAP/GLDAS data"
+      }
+    ],
+    "series": []
+  },
+  "predict": {
+    "status": "SAMPLE",
+    "note": "Scenarios are conceptual placeholders, not model projections. Historical and 2035 values withheld until model results are available.",
+    "scenarios": [
+      {
+        "id": "normal",
+        "name": "Normal year",
+        "period": "1991–2020 baseline",
+        "summary": "Baseline climate summary awaiting data",
+        "temp": null,
+        "rainfall": null,
+        "soil_moisture": null
+      },
+      {
+        "id": "dry",
+        "name": "Historical dry year",
+        "period": "2012 or 2021, subject to verification",
+        "summary": "Dry-year replay awaiting cached NASA data",
+        "temp": null,
+        "rainfall": null,
+        "soil_moisture": null
+      },
+      {
+        "id": "future",
+        "name": "2035 dry-year stress test",
+        "period": "Scenario, not weather forecast",
+        "summary": "Climate adjustments and uncertainty not yet supplied",
+        "temp": null,
+        "rainfall": null,
+        "soil_moisture": null
+      }
+    ]
+  },
+  "plan": {
+    "status": "SAMPLE",
+    "prices_verified": false,
+    "method": "Display Harrow trial examples, not model-ranked rotations. Ranking and revenue are withheld until backend validation.",
+    "rotations": [
+      {
+        "id": "corn-soy-wheat-clover",
+        "name": "Corn → Soy → Winter wheat + red clover",
+        "crops": [
+          "Corn",
+          "Soy",
+          "Winter wheat + red clover"
+        ],
+        "rank": null,
+        "score": null,
+        "soil_score": null,
+        "water_score": null,
+        "revenue": null,
+        "profit": null,
+        "yields": [
+          {
+            "crop": "Corn",
+            "bu_ac": 169,
+            "status": "UNVERIFIED",
+            "source": "AAFC Harrow trial figure listed in team brief; verify treatment and period"
+          }
+        ],
+        "reason": "Diversified rotation is being evaluated for soil health and resilience."
+      },
+      {
+        "id": "corn-soy-wheat",
+        "name": "Corn → Soy → Winter wheat",
+        "crops": [
+          "Corn",
+          "Soy",
+          "Winter wheat"
+        ],
+        "rank": null,
+        "score": null,
+        "soil_score": null,
+        "water_score": null,
+        "revenue": null,
+        "profit": null,
+        "yields": [
+          {
+            "crop": "Soy",
+            "bu_ac": 64,
+            "status": "UNVERIFIED",
+            "source": "AAFC Harrow trial figure listed in team brief; verify treatment and period"
+          }
+        ],
+        "reason": "Wheat may help break pest and disease cycles."
+      },
+      {
+        "id": "corn-soy",
+        "name": "Corn → Soy",
+        "crops": [
+          "Corn",
+          "Soy"
+        ],
+        "rank": null,
+        "score": null,
+        "soil_score": null,
+        "water_score": null,
+        "revenue": null,
+        "profit": null,
+        "yields": [
+          {
+            "crop": "Corn",
+            "bu_ac": 154,
+            "status": "UNVERIFIED",
+            "source": "AAFC Harrow trial figure listed in team brief; verify treatment and period"
+          }
+        ],
+        "reason": "Two-crop comparator in the team brief."
+      }
+    ],
+    "baseline": {
+      "id": "continuous",
+      "name": "Continuous cropping comparator",
+      "yields": [
+        {
+          "crop": "Soy",
+          "bu_ac": 41,
+          "status": "UNVERIFIED",
+          "source": "AAFC Harrow trial figure listed in team brief; verify treatment and period"
+        },
+        {
+          "crop": "Corn",
+          "bu_ac": 118,
+          "status": "UNVERIFIED",
+          "source": "AAFC Harrow trial figure listed in team brief; verify treatment and period"
+        }
+      ]
+    }
+  }
+}

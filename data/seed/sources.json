@@ -1,0 +1,44 @@
+{
+  "_note": "Entries added by Ved (model data) on ved/model. Dev owns this file. When merging with Dev's version, keep both sets of entries.",
+  "files": [
+    {
+      "file": "data/seed/gaez_harrow.csv",
+      "name": "FAO GAEZ v5 crop suitability, Harrow point",
+      "request_url": "one URL per row in the file (storage.googleapis.com/fao-gismgr-gaez-v5-data/...)",
+      "retrieved": "2026-11-14",
+      "units": "GAEZ Suitability Index (SI) 0 to 100, rain-fed, high input. Not a percent.",
+      "coordinates": "42.0356, -82.9183 (UNVERIFIED until Vedant confirms)",
+      "grid_cell": "RES05, 5 arc-minutes, about 9 to 10 km. Nearest pixel row 575 col 1164. No interpolation.",
+      "baseline_period": "2001-2020",
+      "licence": "FAO, free with attribution",
+      "notes": "See data/seed/gaez_harrow_NOTES.md"
+    },
+    {
+      "file": "data/seed/kaggle_crop_recommendation.csv",
+      "name": "Kaggle Crop Recommendation Dataset",
+      "request_url": "https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset/data",
+      "retrieved": "UNVERIFIED (date not recorded)",
+      "units": "N, P, K in kg/ha. Temperature C. Humidity percent. Rainfall mm, period not stated.",
+      "shape": "2200 rows, 8 columns, 22 crop labels. Maize yes. Wheat and soybean no.",
+      "licence": "UNVERIFIED. Check the Kaggle dataset page.",
+      "notes": "Maize and general rules only. Never used for wheat or soy."
+    },
+    {
+      "file": "data/seed/sf24_smart_farming.csv",
+      "name": "Smart Farming Data 2024 (SF24), as identified by columns",
+      "request_url": "UNVERIFIED (original file name was Crop_recommendationV2.csv)",
+      "retrieved": "UNVERIFIED (date not recorded)",
+      "shape": "2200 rows, 23 columns, same 22 crop labels as Kaggle. Maize yes. Wheat and soybean no.",
+      "licence": "UNVERIFIED. Check the Kaggle dataset page.",
+      "notes": "Has soil_moisture, soil_type, sunlight_exposure, wind_speed, co2_concentration, organic_matter, irrigation_frequency, pest_pressure, frost_risk, water_usage_efficiency. Units not stated."
+    },
+    {
+      "file": "data/seed/harrow_trial_yields.csv",
+      "name": "AAFC Harrow rotation trial numbers, hand copied",
+      "request_url": "UNVERIFIED. Copied from SUMMARY-README.md section 5. Vedant to add the AAFC source link (VS1).",
+      "retrieved": "UNVERIFIED",
+      "units": "bu/ac or percent, per row",
+      "licence": "AAFC. Cite Dr. Craig Drury, AAFC Harrow."
+    }
+  ]
+}
