@@ -13,7 +13,7 @@ Team Tuxedo | NASA Space Apps Toronto 2026 | Challenge "Field Shift: Adapting Fa
 | Layer | What we use |
 |---|---|
 | Backend | Python, FastAPI, PostgreSQL, Docker |
-| Machine learning | Python, pandas, scikit-learn Random Forest |
+| Machine learning | Python, pandas, scikit-learn (Random Forest only where we have real training data) |
 | Frontend | JavaScript, Leaflet, HTML and CSS (no React) |
 | Data | NASA POWER, SMAP, IMERG, MODIS, SoilGrids WCS, Sentinel-2, Kaggle CSVs, Harrow trial CSV |
 | Golden rule | Pre-fetch and cache all data. The demo reads the cache. No live API calls during judging. |
@@ -54,7 +54,7 @@ This is the core idea. Everyone on the team should know it.
 - Input is soil, climate, and temperature for that field.
 - Output is a field profile and a suitability percent for each crop.
 - Example (SAMPLE, not real output). Wheat 82 percent, corn 71 percent, soy 88 percent, each with the reason shown.
-- Built as a Random Forest trained on the Kaggle crop datasets.
+- Built from FAO GAEZ suitability, the main source for wheat, soybean, and maize. OMAFRA ranges are the rule-based fallback. Kaggle is secondary, for maize and general rules only. Inputs are only what we can get for Harrow at demo time, which is temperature, rainfall, humidity, pH, nitrogen, soil moisture, soil organic carbon, sand, silt, and clay. No P or K.
 
 **Model 2 recommends crops and rotation, with reasons backed by data.**
 - Input is the suitability percents from Model 1.
@@ -104,9 +104,9 @@ Label every number in the app as **LIVE**, **CACHED**, or **SAMPLE**. For the de
 | Other NASA | ECOSTRESS, GLDAS / MERRA-2, SRTM | Supporting. FIRMS considered and rejected |
 | Harrow trial (AAFC) | Real bushels per rotation, soil carbon | Main yield source. Dr. Craig Drury, Harrow R&D Centre |
 | SoilGrids WCS | Sand, silt, clay, pH, soil carbon, N | 250 m, modelled not measured. REST API is paused so we use WCS |
-| Kaggle (3 sets) | Crop suitability rules | Mostly India and tropical crops. Not Ontario yield truth |
+| Kaggle (3 sets) | Secondary. Maize and general rules only | Mostly India and tropical crops. No wheat or soy. Not Ontario yield truth |
 | Sentinel-2 (ESA) | Field-level NDVI and NDMI | 10 m. We ship small CSVs, never the raw tiles |
-| FAO GAEZ v5 | Suitability percent per crop | 1 km baseline |
+| FAO GAEZ v5 | Main suitability source for wheat, soy, and maize | 1 km, rain-fed, one value per crop at the Harrow point |
 | ERA5-Land | Soil water cross-check | Cross-check for POWER |
 
 Real Harrow numbers are listed in SUMMARY-README.md. Do not invent others.
@@ -200,6 +200,7 @@ Once the backend lands, the plan is `docker compose up --build`. The `docker-com
 - SoilGrids is modelled, not lab-measured. Label it that way.
 - SoilGrids REST is paused. We pre-fetch with WCS and never call it live.
 - Kaggle data is mostly India and tropical crops. We use it for suitability rules, not for Ontario bushels.
+- The Kaggle Crop Recommendation set has maize but no wheat and no soybean, so we do not use it for wheat or soy. GAEZ is the main source. If GAEZ is slow we use OMAFRA ranges and label them as ranges, not model output. If a crop has no source, the code says so and does not score it.
 - SMAP only starts in 2015, so its trend record is short.
 - POWER is a coarse grid. Sentinel-2 at 10 m is the field-level check.
 - The 2035 view is a trend stress test, not a forecast.

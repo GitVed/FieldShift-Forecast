@@ -37,7 +37,7 @@ Details are in TASKS.md. We use one git branch per person (`dev/nasa-data`, `ved
 ## 3. Two models, the core idea, do not change it
 
 **Model 1 predicts the condition of the place.**
-- Input is soil, climate, and temperature for that exact field. Soil texture, pH, organic carbon, N, P, K, plus temperature, rainfall, humidity, radiation, soil moisture, vegetation health
+- Input is soil, climate, and temperature for that exact field. Only features we can get for Harrow at demo time. Temperature, rainfall, humidity, pH, nitrogen, soil moisture, soil organic carbon, sand, silt, clay. No P or K
 - Output is a field profile and a suitability percent for each crop
 - Example (SAMPLE, not real output). Wheat 82 percent, corn 71 percent, soy 88 percent, with the reason for each percent shown
 
@@ -58,6 +58,32 @@ Revenue                = Estimated yield x commodity price (price and date state
 ```
 
 Open item. The rule for the climate adjustment is not defined yet. Until the team agrees one, use 1 (no change) and label it an assumption.
+
+## 3b. Model 1 fix, decided Sat Nov 14, 2:45 PM
+
+Problem. The Kaggle Crop Recommendation set has maize but no wheat and no soybean. SoilGrids has nitrogen but no P or K.
+
+Decision
+- FAO GAEZ is the main source for wheat, soybean, and maize suitability. Fetch it for the Harrow point, rain-fed, save to `data/seed/gaez_harrow.csv` with a suitability percent per crop
+- Kaggle is secondary, for maize and general rules only. Never use it for wheat or soy
+- Check the SF24 crop labels first. Do not assume wheat or soy are in it
+- Drop P and K from Model 1. Inputs are temperature, rainfall, humidity, pH, nitrogen, soil moisture, soil organic carbon, sand, silt, clay
+- If GAEZ is slow, use OMAFRA ranges as a rule-based fallback and label them as ranges, not model output
+- Do not invent wheat or soy training data. If a crop is not in GAEZ or Kaggle, say so in the code and do not score it
+
+Harrow point, provided by Ved. 42.0356, -82.9183. Vedant to confirm.
+
+OMAFRA ranges, provided by Ved, UNVERIFIED until Vedant checks the source
+- Wheat. pH 6.0 to 7.5, moisture 350 to 650 mm, optimum temperature 10 to 25 C
+- Soybean. pH 6.0 to 7.0, moisture 450 to 700 mm, development temperature 20 to 30 C
+- Maize. No range supplied yet. Get one from OMAFRA or do not score it by this fallback
+- Confirm which period the mm values cover
+
+Catches to keep in mind
+- GAEZ gives one number per crop at a point. That is a lookup baseline, not training data. A Random Forest needs many rows
+- A fixed GAEZ number will not change in the dry-year and 2035 views. Range fit scores will, because they use temperature and rain
+- Kaggle nitrogen is kg/ha, so do not mix it with SoilGrids nitrogen. Kaggle also has no soil moisture, organic carbon, or texture
+- How to download GAEZ is UNVERIFIED. Check the GAEZ data portal
 
 ## 4. Decision locked, Avenue 1 Harrow is main
 
@@ -156,7 +182,7 @@ Dev's check, step by step
 - Features are N, P, K, temperature, humidity, pH, rainfall. Target is the recommended crop
 - Ranges are N 0 to 140, P 5 to 145, K 5 to 205, temperature 8.8 to 43.7 C, humidity 14.3 to 99.98 percent, pH 3.5 to 9.9, rainfall 20.2 to 298.6 mm
 - Papers report 93.71 percent Random Forest accuracy on the 22 crops
-- Use it to learn suitability rules. Do NOT use it for Ontario bushels. It is mostly India and tropical crops, plus maize and wheat
+- Use it to learn suitability rules. Do NOT use it for Ontario bushels. It is mostly India and tropical crops. The 22 crops include maize but NOT wheat or soybean (checked against papers that list the crop labels)
 
 **Smart Farming Data 2024 (SF24)**
 - 2,200 records, 23 attributes, 22 crop classes
@@ -263,13 +289,20 @@ Decision. Do Harrow deep, not global shallow. Build the method so it can go glob
 
 ## 14. Open items
 
-- Harrow field latitude and longitude are not decided. Dev marks them UNVERIFIED, Vedant confirms
+- Harrow point is 42.0356, -82.9183, provided by Ved. Vedant confirms. Dev marks it UNVERIFIED until then
 - No price source or date has been chosen for corn, soy, or wheat
 - The climate adjustment rule for Model 2 is not defined
 - Some Harrow trial numbers need a source check (see section 5)
 - Kaggle rainfall units need matching to Harrow data (see section 8)
 - SMAP is a short record, so check whether a trend on it is meaningful
 - The rotation list. Score the rotations that have Harrow trial numbers, show the top 3, and show continuous cropping as the baseline
+
+## 14b. Gaps found in review, Sat 2 PM
+
+- Model 1 wheat and soy gap and the P and K gap are decided. See section 3b
+- The Predict screen (normal, dry, 2035 dry, and the 2012 replay) had no owner. See TASKS.md
+- Postgres and Docker add risk and are not needed for the demo to work. Read the CSVs with pandas first
+- Sentinel-2 and MODIS NDVI and GAEZ fetches have no owner. Treat NDVI as a stretch goal
 
 ## 15. Demo flow, 90 seconds, outline only
 
