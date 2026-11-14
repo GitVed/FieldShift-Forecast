@@ -11,9 +11,9 @@ Last updated Sat Nov 14, 2 PM. Building closes 6 PM tonight. After that we work 
 | Person | Job right now | Branch |
 |---|---|---|
 | Dev Patel | Check the NASA data, work out how to use it, save CSVs, record sources | `dev/nasa-data` |
-| Ved Patel | The model. Model 1 suitability and Model 2 rotation scorer | `ved/model` |
+| Ved Patel | Model 1 suitability (V2), field config, FastAPI skeleton (V4) | `ved/model` |
 | Shlok Mehta | Interface. Leaflet map, three screens, make it look good | `shlok/ui` |
-| Vedant Soni | Not here yet. Takes the Vedant jobs below when he arrives | `vedant/pitch` |
+| Vedant Soni | Here now. Model 2 rotation scorer (V3) first, with the number checks in VS1 that block it. Pitch and submission later | `vedant/pitch` |
 | Whoever finishes first | Avenue 2, optional, at the very end of this file | `avenue-2-global` |
 
 ## Ground rules
@@ -60,11 +60,24 @@ Who owns which files, so we do not collide
 | Files | Owner |
 |---|---|
 | `data/seed/sources.json`, NASA CSVs, `backend/trend.py`, `backend/db.py`, `docker-compose.yml` | Dev |
-| `backend/suitability.py`, `backend/rotation.py`, `backend/app.py`, `requirements.txt`, `backend/field_config.json`, Kaggle and trial CSVs | Ved |
+| `backend/suitability.py`, `backend/app.py`, `requirements.txt`, `backend/field_config.json`, Kaggle, SF24 and GAEZ CSVs | Ved |
+| `backend/rotation.py`, `data/seed/harrow_trial_yields.csv` (Vedant fixes the UNVERIFIED rows, tells Ved) | Vedant |
 | `frontend/` | Shlok |
 | `README.md`, `SUMMARY-README.md`, pitch and submission files | Vedant |
 
 If you need a change in someone else's file, message them. For `requirements.txt` and `sources.json`, add lines only and tell the owner.
+
+---
+
+## Gaps found in review, and what we decided
+
+These are places where the plan does not connect yet. Talk about them early. They are cheap now and expensive tonight.
+
+1. **Model 1 had no wheat or soy data. Decided Sat 2:45 PM.** GAEZ is the main source. OMAFRA ranges are the fallback. Kaggle is maize and general rules only. See V2 and section 3b in SUMMARY-README.md.
+2. **N, P, K.** SoilGrids has nitrogen but no P or K. P and K are dropped from Model 1. Kaggle nitrogen is kg/ha, so it is not mixed with SoilGrids nitrogen.
+3. **The Predict screen has no owner.** Normal year, dry year, 2035 dry year, and the 2012 dry-year replay all need logic. Proposal is that Dev's `trend.py` outputs adjusted temperature and rain for each scenario, and Ved's `/api/rotation/{field_id}` takes a `scenario` option. Climate then flows through Model 1 (temperature and rain change the suitability), so the bushel climate adjustment can stay at 1.
+4. **Postgres is optional for the demo.** Ved's `app.py` reads the CSVs in `data/seed/` with pandas first. Dev adds Postgres only if there is time and Docker behaves.
+5. **NDVI is a stretch goal.** The Sentinel-2 download is about 1 GB and slow. If skipped, the `sentinel2-ndvi` layer shows SAMPLE data, clearly labelled.
 
 ---
 
@@ -100,7 +113,7 @@ Goal is to answer two questions. Is the NASA data good to use? How do we use it?
 - GPM IMERG rainfall, 2000 to present, needs Earthdata login
 
 **Steps**
-1. Find Harrow, Essex County, Ontario on a map and write down the latitude and longitude. Mark them UNVERIFIED until Vedant confirms. Do not use Toronto City Hall coordinates.
+1. Use the Harrow point 42.0356, -82.9183 (provided by Ved). Mark it UNVERIFIED until Vedant confirms. Do not use Toronto City Hall coordinates.
 2. Use this URL pattern for POWER and fill in the Harrow coordinates `https://power.larc.nasa.gov/api/temporal/monthly/point?parameters=T2M&community=AG&longitude=LON&latitude=LAT&start=1981&end=2025&format=JSON`
 3. Look up the right precipitation parameter name in the POWER docs. Do not guess it.
 4. Fetch SMAP and IMERG for the same point. Save CSVs.
@@ -183,29 +196,70 @@ Once Ved's `backend/app.py` is merged to main, add `GET /api/trend/{cell_id}` an
 **Steps**
 1. Download the Kaggle files. Put the two small ones in `data/seed/`.
 2. Build `harrow_trial_yields.csv` by hand from the Harrow numbers in SUMMARY-README.md. Add a source column. Do not add numbers that are not on that list.
-3. Make the field config. Leave lat and lon as UNVERIFIED until Vedant or Dev confirm them.
+3. Make the field config with lat 42.0356 and lon -82.9183. Mark them UNVERIFIED until Vedant confirms.
 
 **Done looks like.** Files exist. The trial CSV matches the numbers in SUMMARY-README.md exactly.
 
 ## V2. Model 1, suitability
 
+**Decision, Sat 2:45 PM.** GAEZ is the main source for wheat, soybean, and maize. Kaggle is secondary, for maize and general rules only. Never use Kaggle for wheat or soy.
+
 **Files to create**
+- `data/seed/gaez_harrow.csv` (suitability percent per crop, rain-fed, at the Harrow point, with source)
 - `backend/suitability.py`
 - `notebooks/04_train_suitability.ipynb`
 
 **Steps**
-1. Train a Random Forest on Kaggle Crop Recommendation, plus SF24 if it helps.
-2. Inputs are N, P, K, temperature, humidity, pH, rainfall. Add soil moisture if SF24 supports it.
-3. Output is a suitability percent per crop for wheat, corn, and soy, with the reason for each.
-4. Watch the units. Kaggle rainfall runs 20.2 to 298.6 mm, so it is probably not annual totals. Match the period before feeding in Harrow rain. Write down what you decided.
-5. Until Dev's data is ready, run on a SAMPLE field profile and label it SAMPLE.
+1. Check the SF24 crop labels first. Do not assume wheat or soy are in it.
+2. Fetch FAO GAEZ v5 for 42.0356, -82.9183, rain-fed, for wheat, soybean, and maize. How to download is UNVERIFIED, check the GAEZ data portal.
+3. Model 1 inputs are only what we can get for Harrow at demo time. Temperature, rainfall, humidity, pH, nitrogen, soil moisture, soil organic carbon, sand, silt, clay. No P or K.
+4. If GAEZ is slow, use the OMAFRA ranges below as a rule-based fallback. Label them ranges, not model output.
+   - Wheat, pH 6.0 to 7.5, moisture 350 to 650 mm, optimum temperature 10 to 25 C
+   - Soybean, pH 6.0 to 7.0, moisture 450 to 700 mm, development temperature 20 to 30 C
+   - Maize, no range supplied yet. Get one from OMAFRA or do not score it by this fallback
+   - These were supplied by Ved and are UNVERIFIED until Vedant checks the source
+5. Kaggle can only learn from features it has, which are temperature, humidity, pH, and rainfall. Its nitrogen is kg/ha, so do not mix it with SoilGrids nitrogen. Use it for maize and general rules only.
+6. If a crop is not in GAEZ or Kaggle and has no range, say so in the code and do not score it. Never invent training data.
+7. Print which source each crop percent came from, GAEZ, range fallback, or Kaggle.
+8. Until Dev's data is ready, run on a SAMPLE field profile and label it SAMPLE.
 
-**Done looks like.** `python backend/suitability.py` prints model accuracy, feature importance, and a suitability percent for each crop on a SAMPLE field.
+**Watch out**
+- GAEZ gives one number per crop at a point. That is a lookup baseline, not training data. A Random Forest needs many rows.
+- A fixed GAEZ number will not change in the dry-year and 2035 views. A range fit score will, because it uses temperature and rain. Decide early how Predict will use this.
 
-## V3. Model 2, rotation scorer
+**Done looks like.** `python backend/suitability.py` prints a percent per crop for Harrow with the source named, and says plainly which crops are not scored.
+
+## V3. Model 2, rotation scorer (owner is now Vedant)
+
+**Contract between Model 1, Model 2 and the API.** Agreed so Ved and Vedant can work at the same time.
+- Crop names are `wheat`, `soybean`, `corn`. Model 1 and GAEZ say `maize`, and some docs say `soy`. `rotation.py` maps `maize` to `corn` and `soy` to `soybean`.
+- Input is the dict that `suitability.score_crops(profile, scenario)` returns. Each crop has `percent` (a number, or `None` if not scored) and `source`.
+- `rotation.rank_rotations(suitability, scenario="normal")` returns a list of rotations. Each has `name`, `crops`, `status` (`scored`, `not scored`, or `pending rules`), `not_scored_crops`, `overall_percent` (or `None`), `breakdown`, `yield_bu_ac` per crop (or `UNVERIFIED`), `revenue_per_ac` (or `price not chosen`) and a `label` (LIVE, CACHED or SAMPLE).
+- A rotation containing a crop with no percent is `not scored`. It is never dropped and never given an invented score.
+- `app.py` (Ved) only calls `rank_rotations`. Only Vedant edits `rotation.py`. Only Ved edits `suitability.py`.
+- The `scenario` option goes to Model 1. Model 2 does not change it.
+
+**Vedant, start here**
+1. Get the skeleton. It is on Ved's branch until it is merged. Run `git fetch` then `git checkout -b vedant/model2 origin/ved/model`.
+2. Run `python backend/rotation.py`. You will see six rotations on SAMPLE data.
+3. Open `data/seed/harrow_trial_yields.csv`. Fix the rows marked UNVERIFIED using the AAFC source (VS1). Put a source link in each row you fix. Tell Ved what you changed.
+4. Decide the rules in the open questions below. Write each rule as a comment at the top of `rotation.py`, with the source or the trial numbers it comes from. If it has no source, mark it SAMPLE.
+5. Fill in the `breakdown`, `yield_bu_ac` and `overall_percent` fields. Keep the output shape the same, so Ved's `app.py` and Shlok's screens do not break.
+6. Keep "not scored" for any rotation with a crop that has no percent. Do not invent a number.
+7. Revenue stays "price not chosen" until you pick a price source and date (VS1).
+8. Only edit `rotation.py` and the trial CSV. Do not edit `suitability.py`, `app.py` or `field_config.json`. Message Ved if you need a change there.
+9. Commit small and often. Tell Ved when a piece runs.
+
+**Done looks like.** `python backend/rotation.py` prints ranked rotations with overall percent, bushels per acre, revenue (or "price not chosen"), and a breakdown. Every number has a source, or is marked SAMPLE or UNVERIFIED.
+
+**Open questions for Vedant, in order**
+1. Which crop each trial number is for (53, 64, 154), and per-crop bushels. Wheat has no yield in the docs.
+2. How rotation benefit and soil penalty derive from trial numbers. The 12, 10 and 50 percent in the README are SAMPLE examples only.
+3. Whether red clover counts in the average. It has no suitability source.
+4. The climate adjustment rule. Stays at 1 until agreed.
 
 **Files to create**
-- `backend/rotation.py`
+- `backend/rotation.py` (skeleton exists, no scoring rules yet)
 
 **Steps**
 1. Score each rotation as average crop suitability, plus rotation benefit, minus soil penalty.
@@ -287,7 +341,8 @@ Check every Harrow number against its source and put the link under each one. Ch
 - Corn, soy, wheat soy yield is listed as 64 bu/ac and plus 50 percent, but continuous soy is 41. Does that add up?
 - Corn gains show up as 38 to 42 percent, 43 percent, and 68 percent. Confirm which base and which period each one uses.
 - Soy gain listed as 51 to 54 percent. Confirm it.
-- Confirm the Harrow field choice and its latitude and longitude, and tell Dev and Ved.
+- Confirm the Harrow point 42.0356, -82.9183 and tell Dev and Ved.
+- Check the OMAFRA ranges Ved supplied for wheat and soybean against the OMAFRA source, and find a maize range. Confirm what period the mm values cover.
 - Pick a price source and date for corn, soy, and wheat. Do not make one up.
 
 **Done looks like.** Every number on a slide has a source link, or is marked UNVERIFIED.
