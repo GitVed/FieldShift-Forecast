@@ -1,0 +1,11 @@
+{
+  "field_id": "harrow",
+  "name": "Harrow, Ontario pilot field",
+  "lat": 42.0356,
+  "lon": -82.9183,
+  "coordinates_status": "UNVERIFIED until Vedant confirms. Provided by Ved.",
+  "soil_type": "Brookston clay loam",
+  "trial_file": "data/seed/harrow_trial_yields.csv",
+  "price_file": "none chosen",
+  "price_status": "UNVERIFIED. No price source or date chosen. Vedant picks one (TASKS VS1)."
+}

@@ -28,9 +28,9 @@ The repo only has docs. No code yet.
 | Person | Current job |
 |---|---|
 | Dev Patel | Checking the NASA data and how to integrate and use it. Saving CSVs. Recording sources.json. Then trend.py, SoilGrids, database |
-| Ved Patel | The model. Model 1 suitability, Model 2 rotation scorer, FastAPI skeleton |
+| Ved Patel | Model 1 suitability, FastAPI skeleton |
 | Shlok Mehta | Interface. Leaflet map, Detect, Predict, Plan screens, making it look good |
-| Vedant Soni | Not here yet. Later he verifies the Harrow numbers, confirms the field, writes the demo script, pitch, and submission |
+| Vedant Soni | Here now. Model 2 rotation scorer first, with the Harrow number checks that block it. Later the demo script, pitch, and submission |
 
 Details are in TASKS.md. We use one git branch per person (`dev/nasa-data`, `ved/model`, `shlok/ui`, `vedant/pitch`) and merge small pieces to main often. Main must always run.
 

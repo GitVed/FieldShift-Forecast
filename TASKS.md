@@ -11,9 +11,9 @@ Last updated Sat Nov 14, 2 PM. Building closes 6 PM tonight. After that we work 
 | Person | Job right now | Branch |
 |---|---|---|
 | Dev Patel | Check the NASA data, work out how to use it, save CSVs, record sources | `dev/nasa-data` |
-| Ved Patel | The model. Model 1 suitability and Model 2 rotation scorer | `ved/model` |
+| Ved Patel | Model 1 suitability (V2), field config, FastAPI skeleton (V4) | `ved/model` |
 | Shlok Mehta | Interface. Leaflet map, three screens, make it look good | `shlok/ui` |
-| Vedant Soni | Not here yet. Takes the Vedant jobs below when he arrives | `vedant/pitch` |
+| Vedant Soni | Here now. Model 2 rotation scorer (V3) first, with the number checks in VS1 that block it. Pitch and submission later | `vedant/pitch` |
 | Whoever finishes first | Avenue 2, optional, at the very end of this file | `avenue-2-global` |
 
 ## Ground rules
@@ -60,7 +60,8 @@ Who owns which files, so we do not collide
 | Files | Owner |
 |---|---|
 | `data/seed/sources.json`, NASA CSVs, `backend/trend.py`, `backend/db.py`, `docker-compose.yml` | Dev |
-| `backend/suitability.py`, `backend/rotation.py`, `backend/app.py`, `requirements.txt`, `backend/field_config.json`, Kaggle and trial CSVs | Ved |
+| `backend/suitability.py`, `backend/app.py`, `requirements.txt`, `backend/field_config.json`, Kaggle, SF24 and GAEZ CSVs | Ved |
+| `backend/rotation.py`, `data/seed/harrow_trial_yields.csv` (Vedant fixes the UNVERIFIED rows, tells Ved) | Vedant |
 | `frontend/` | Shlok |
 | `README.md`, `SUMMARY-README.md`, pitch and submission files | Vedant |
 
@@ -228,10 +229,37 @@ Once Ved's `backend/app.py` is merged to main, add `GET /api/trend/{cell_id}` an
 
 **Done looks like.** `python backend/suitability.py` prints a percent per crop for Harrow with the source named, and says plainly which crops are not scored.
 
-## V3. Model 2, rotation scorer
+## V3. Model 2, rotation scorer (owner is now Vedant)
+
+**Contract between Model 1, Model 2 and the API.** Agreed so Ved and Vedant can work at the same time.
+- Crop names are `wheat`, `soybean`, `corn`. Model 1 and GAEZ say `maize`, and some docs say `soy`. `rotation.py` maps `maize` to `corn` and `soy` to `soybean`.
+- Input is the dict that `suitability.score_crops(profile, scenario)` returns. Each crop has `percent` (a number, or `None` if not scored) and `source`.
+- `rotation.rank_rotations(suitability, scenario="normal")` returns a list of rotations. Each has `name`, `crops`, `status` (`scored`, `not scored`, or `pending rules`), `not_scored_crops`, `overall_percent` (or `None`), `breakdown`, `yield_bu_ac` per crop (or `UNVERIFIED`), `revenue_per_ac` (or `price not chosen`) and a `label` (LIVE, CACHED or SAMPLE).
+- A rotation containing a crop with no percent is `not scored`. It is never dropped and never given an invented score.
+- `app.py` (Ved) only calls `rank_rotations`. Only Vedant edits `rotation.py`. Only Ved edits `suitability.py`.
+- The `scenario` option goes to Model 1. Model 2 does not change it.
+
+**Vedant, start here**
+1. Get the skeleton. It is on Ved's branch until it is merged. Run `git fetch` then `git checkout -b vedant/model2 origin/ved/model`.
+2. Run `python backend/rotation.py`. You will see six rotations on SAMPLE data.
+3. Open `data/seed/harrow_trial_yields.csv`. Fix the rows marked UNVERIFIED using the AAFC source (VS1). Put a source link in each row you fix. Tell Ved what you changed.
+4. Decide the rules in the open questions below. Write each rule as a comment at the top of `rotation.py`, with the source or the trial numbers it comes from. If it has no source, mark it SAMPLE.
+5. Fill in the `breakdown`, `yield_bu_ac` and `overall_percent` fields. Keep the output shape the same, so Ved's `app.py` and Shlok's screens do not break.
+6. Keep "not scored" for any rotation with a crop that has no percent. Do not invent a number.
+7. Revenue stays "price not chosen" until you pick a price source and date (VS1).
+8. Only edit `rotation.py` and the trial CSV. Do not edit `suitability.py`, `app.py` or `field_config.json`. Message Ved if you need a change there.
+9. Commit small and often. Tell Ved when a piece runs.
+
+**Done looks like.** `python backend/rotation.py` prints ranked rotations with overall percent, bushels per acre, revenue (or "price not chosen"), and a breakdown. Every number has a source, or is marked SAMPLE or UNVERIFIED.
+
+**Open questions for Vedant, in order**
+1. Which crop each trial number is for (53, 64, 154), and per-crop bushels. Wheat has no yield in the docs.
+2. How rotation benefit and soil penalty derive from trial numbers. The 12, 10 and 50 percent in the README are SAMPLE examples only.
+3. Whether red clover counts in the average. It has no suitability source.
+4. The climate adjustment rule. Stays at 1 until agreed.
 
 **Files to create**
-- `backend/rotation.py`
+- `backend/rotation.py` (skeleton exists, no scoring rules yet)
 
 **Steps**
 1. Score each rotation as average crop suitability, plus rotation benefit, minus soil penalty.
