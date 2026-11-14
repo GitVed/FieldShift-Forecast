@@ -1,5 +1,7 @@
 # FieldShift Forecast, full context
 
+> Model 2 update (2026-11-14): Vedant's independent scorer and 14 tests now exist. Default evidence-only mode leaves unsupported overall scores pending; opt-in SAMPLE ranking supports UI development. Three soybean yield references and dated prices are cached. Corn/wheat yields, score calibration, trial/pilot location matching and live model integration remain open. See [Model 2 handoff](docs/MODEL2.md), [evidence audit](docs/EVIDENCE.md), and [presentation drafts](docs/VEDANT_PRESENTATION_DRAFT.md). Older planning claims below are not automatically verified.
+
 This file is the full context for teammates and for any AI assistant helping on the project. If you are an AI, read this whole file before you change anything. Do not start over. Do not invent numbers.
 
 The short, presentable version is README.md. Jobs and owners are in TASKS.md.
@@ -23,7 +25,7 @@ FieldShift Forecast helps a farmer near Harrow, Ontario choose a crop rotation t
 
 ## 2. Current status and who is doing what
 
-The repo only has docs. No code yet.
+The repo now contains model skeletons and the independent Model 2 implementation. See the status update above.
 
 | Person | Current job |
 |---|---|

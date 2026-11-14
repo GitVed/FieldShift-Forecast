@@ -1,0 +1,10 @@
+crop,suitability,suitability_class,scenario,source_url,retrieved_date
+wheat,97.91,SI >85 Very high,1981-2000 rain-fed high input,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.HP8100.AGERA5.HIST.WHE.HRLM.tif,2026-11-14
+soybean,75.81,SI 70-85 High,1981-2000 rain-fed high input,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.HP8100.AGERA5.HIST.SOY.HRLM.tif,2026-11-14
+maize,97.91,SI >85 Very high,1981-2000 rain-fed high input,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.HP8100.AGERA5.HIST.MZE.HRLM.tif,2026-11-14
+wheat,97.91,SI >85 Very high,2001-2020 rain-fed high input,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.HP0120.AGERA5.HIST.WHE.HRLM.tif,2026-11-14
+soybean,53.71,SI 40-55 Medium,2001-2020 rain-fed high input,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.HP0120.AGERA5.HIST.SOY.HRLM.tif,2026-11-14
+maize,97.91,SI >85 Very high,2001-2020 rain-fed high input,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.HP0120.AGERA5.HIST.MZE.HRLM.tif,2026-11-14
+wheat,97.91,SI >85 Very high,2021-2040 rain-fed high input SSP370 ENSEMBLE,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.FP2140.ENSEMBLE.SSP370.WHE.HRLM.tif,2026-11-14
+soybean,62.55,SI 55-70 Good,2021-2040 rain-fed high input SSP370 ENSEMBLE,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.FP2140.ENSEMBLE.SSP370.SOY.HRLM.tif,2026-11-14
+maize,93.49,SI >85 Very high,2021-2040 rain-fed high input SSP370 ENSEMBLE,https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX/GAEZ-V5.RES05-SXX.FP2140.ENSEMBLE.SSP370.MZE.HRLM.tif,2026-11-14

@@ -1,0 +1,44 @@
+{
+  "corn": {
+    "value": 6.9950213371266,
+    "unit": "CAD/bu",
+    "currency": "CAD",
+    "period": "2026-09",
+    "label": "CACHED",
+    "source": "https://gfo.ca/average-commodity-prices/",
+    "retrieved_date": "2026-11-14",
+    "original_value": 275.38,
+    "original_unit": "CAD/tonne",
+    "bushels_per_tonne": 39.368,
+    "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+    "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+  },
+  "soybean": {
+    "value": 16.461463096015677,
+    "unit": "CAD/bu",
+    "currency": "CAD",
+    "period": "2026-09",
+    "label": "CACHED",
+    "source": "https://gfo.ca/average-commodity-prices/",
+    "retrieved_date": "2026-11-14",
+    "original_value": 604.86,
+    "original_unit": "CAD/tonne",
+    "bushels_per_tonne": 36.744,
+    "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+    "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+  },
+  "wheat": {
+    "value": 8.58480296102765,
+    "unit": "CAD/bu",
+    "currency": "CAD",
+    "period": "2026-09",
+    "label": "CACHED",
+    "source": "https://gfo.ca/average-commodity-prices/",
+    "retrieved_date": "2026-11-14",
+    "original_value": 315.44,
+    "original_unit": "CAD/tonne",
+    "bushels_per_tonne": 36.744,
+    "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+    "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+  }
+}

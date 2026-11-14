@@ -1,5 +1,7 @@
 # TASKS
 
+> Model 2 update (2026-11-14): Vedant's independent scorer and 14 tests now exist. Default evidence-only mode leaves unsupported overall scores pending; opt-in SAMPLE ranking supports UI development. Three soybean yield references and dated prices are cached. Corn/wheat yields, score calibration, trial/pilot location matching and live model integration remain open. See [Model 2 handoff](docs/MODEL2.md), [evidence audit](docs/EVIDENCE.md), and [presentation drafts](docs/VEDANT_PRESENTATION_DRAFT.md). Older planning claims below are not automatically verified.
+
 Team Tuxedo, FieldShift Forecast. You can skim this in 5 minutes.
 
 Last updated Sat Nov 14, 2 PM. Building closes 6 PM tonight. After that we work remote.
