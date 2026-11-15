@@ -229,11 +229,12 @@ https://browser.dataspace.copernicus.eu/
 
 Inputs, all from cached files. No live API in the demo.
 
-- Climate: NASA POWER monthly temperature, rain and humidity, 1981 to 2025. The pilot point falls in the POWER cell centred 42.0, -83.125
-- Soil moisture: GLDAS Noah, 0.25 degree, four layers, 2000 to 2025
-- Soil: HWSD2 regional estimate for the top 20 cm, used for texture and pH only. pH 6.7, sand 31, silt 41, clay 28 percent. SoilGrids returned no valid values at this point
-- Soil carbon: the local trial measurement, 2.0 to 2.25 percent (Drury, 2021). The HWSD2 global model shows 6.6 percent for this point. We use the local measurement and do not average them. Sampling depth is not stated in the source
-- Crop calendar (OMAFRA 2017, citation as supplied, not checked): corn and soybean seeded in May, harvested late September to early November. Winter wheat seeded late August to mid October the year before, harvested late June to mid July. May to September is the corn and soybean window only. Winter wheat is out by July, which frees the field for red clover
+- Field: a 300 m SAMPLE square of cropland at 42.0337, -82.9287, checked on ESA WorldCover 2021 (95 percent cropland). It replaced the first point, which sat in Harrow town. It is in the same NASA POWER, GLDAS and IMERG cells and the same GAEZ pixel, so the NASA and GAEZ data did not change
+- Climate: NASA POWER monthly and daily temperature, rain and humidity, 1981 to 2025, in the POWER cell centred 42.0, -83.125. GPM IMERG rain, 1998 to 2025, is a second NASA rain source
+- Soil moisture: GLDAS Noah, 0.25 degree, 0-10, 10-40 and 40-100 cm, 2000 to 2025
+- Soil: ISRIC SoilGrids 250 m at the field, 0 to 30 cm, for texture and pH (pH 6.6, sand 37.5, silt 36.1, clay 26.4 percent, modelled). HWSD2 (pH 6.7) is kept as a cross-check
+- Soil carbon: the local trial measurement, 2.0 to 2.25 percent (Drury, 2021). The HWSD2 global model shows 6.6 percent. We use the local measurement and do not average them. Sampling depth is not stated in the source
+- Crop calendar, OMAFRA Publication 811: corn planted late April and the first half of May; soybeans best before mid May, harvested 3 to 10 days after maturity (mid September to early October); winter wheat best sown mid October in southwestern Ontario (OMAFRA Field Crop Report, 2017). Corn and wheat harvest months were not found as a calendar. May to September is the corn and soybean window only
 - Suitability: FAO GAEZ v5 Suitability Index, rain-fed, high input
 
 Scores are 0 to 100 on the GAEZ Suitability Index. They are not a percent chance.
@@ -247,7 +248,8 @@ Scores are 0 to 100 on the GAEZ Suitability Index. They are not a percent chance
 The 2012 dry year keeps the baseline score, because no source gives a crop response for one dry season. It shows the measured stress instead. May to September rain was 317 mm against a 426 mm normal. It was 1.75 C warmer. July topsoil moisture was 0.314 against 0.348.
 
 Checks shown beside each score, never blended into it:
-- Rain against FAO crop water need (FAO, Crop Water Needs, Table 5). In a normal year, May to September rain covers 53 to 85 percent of maize need. In 2012 it covers 40 to 63 percent
+- Rain against FAO crop water need (FAO, Crop Water Needs, Table 5), as a range across POWER and IMERG. Normal year: rain covers 53 to 94 percent of corn need. 2012: 40 to 83 percent
+- 2012 stress, measured: May to September rain 55 to 108 mm below normal across IMERG and POWER, degree days above 10 C 1698 against 1438, deeper July soil moisture lower (0.274 against 0.340 at 40-100 cm). Longest dry spells were not longer than normal
 - Soil pH against the OMAFRA target for fine-textured soils. 6.7 meets the wheat, soybean and corn targets
 
 There is no Random Forest yet. Kaggle and SF24 have no wheat or soybean. They stay for maize and general rules later.
@@ -257,7 +259,8 @@ There is no Random Forest yet. Kaggle and SF24 have no wheat or soybean. They st
 Rule based. No ML yield predictor. Code is `backend/rotation.py`. Evidence is in `docs/EVIDENCE.md`.
 
 - Uses only trial yields with a source link. Corn, Top Crop Manager (Drury, 2021-07-30): continuous 118, corn-soy 154, corn-soy-wheat plus red clover 169 bu/ac. Red clover adds 5 bu/ac, so corn-soy-wheat without clover is 164 bu/ac, marked DERIVED because the article does not print it. Soybean, Drury interview (2021): continuous 41, soy-soy-wheat 53, corn-soy-wheat 64 bu/ac. The article gives about 42 and 63 for 2016-2020
-- Wheat has no yield in either source. Wheat yield and wheat quantity show "not available", never a guess
+- Long-term trial averages from the same Woodslee trial (Agomoh et al. 2021 for soybean, 2002-2018; Agomoh et al. 2020 for winter wheat, 11 years), converted from t/ha, are shown beside the 5-year figures. They fill every soybean and wheat gap. They are never averaged with the 5-year figures and are not in the trial yield index
+- Essex County 2025 winter wheat, 96.9 bu/ac (OMAFA county estimates), is shown as a regional line, not trial evidence. It is not in the trial yield index
 - Prices are Grain Farmers of Ontario monthly averages for September 2026. Gross revenue is shown only when every crop yield in the rotation is verified. No profit, because costs are not verified
 - Score is the trial yield index: for each crop with a trial yield, trial yield divided by the best trial yield for that crop (corn 169, soybean 64), times 100, then averaged. Crops without a yield are left out and listed
 - Trial gains over continuous cropping, shown on each card: corn-soy +30.5 percent, corn-soy-wheat plus clover +43.2 percent (corn); soy-soy-wheat +29.3 percent, corn-soy-wheat +56.1 percent (soybean)
@@ -269,9 +272,11 @@ Rule based. No ML yield predictor. Code is `backend/rotation.py`. Evidence is in
 
 - `must_grow` is soybean, maize or wheat. `corn` is accepted as maize. Only rotations containing that crop come back. An unknown crop returns an empty list and a `message`
 - Rotations are ranked by the 2012 dry year first (`rank`, same as `rank_dry`), with `rank_normal` beside it. Dry rank uses drought evidence first, then how much of the crop water need 2012 rain covered, then the trial yield index
-- Drought evidence: in drought years, diverse rotations reduced maize yield losses by 14 to 90 percent against simple rotations (Bowles et al. 2020, 11 North American trials, not Harrow). We show the low end, 14 percent. It is a smaller loss, not 14 percent more yield. Treating corn plus two other crops as "diverse" is our reading and is UNVERIFIED
+- Drought evidence: in the worst drought years at US trial sites, maize yielded 14.0 to 88.9 percent more in more diverse rotations than in simpler ones (Bowles et al. 2020; the summary says losses were reduced 14.0 to 89.9 percent). Not Ontario. We show the low end, 14 percent. The paper scores diversity with an index of species, cover crops and rotation length; our corn-plus-two-crops rule is a simplification
 - Each card shows the 2012 dry result beside the normal result as a low to high range of crop water need covered by May to September rain
-- `need_bu` compares your bu/ac target with the trial yield for that crop in each rotation: yes, or no with the shortfall. Wheat shows not available
+- `need_bu` compares your bu/ac target with every trial figure for that crop in each rotation (5-year and long-term), with the shortfall. It also shows the per-year average over the whole rotation. When only a regional average exists, that is used and labelled
+- When a crop is picked, `rank` follows that crop's trial yield (rotations without one come last). With no crop picked, `rank` is the dry-year rank
+- `GET /api/crops/harrow` lists the other 21 Kaggle crops, suitability only: GAEZ v5 now and 2035, a Kaggle climate check, Ontario status and any rotation advice, with sources. No bushels or rotations for them
 - New fields only: `rank_normal`, `rank_dry`, `score_kind`, `trial_gain_vs_continuous_pct`, `normal`, `dry`, `soil`, `soil_source`, `quantity` on each rotation; `must_grow`, `need_bu`, `message`, `ranking`, `crop_calendar`, `soil_carbon` on the plan. Nothing in Shlok's shape was renamed or removed. The picker on the Plan screen only sets these parameters; all filtering and ranking happen in the backend
 
 The formula is unchanged: overall score = average suitability + rotation benefit - soil penalty. The 12, 10 and 50 point examples in early drafts were SAMPLE only and are not used.
@@ -307,7 +312,7 @@ FieldShift Forecast
 │   ├── trend.py, seed.py, db.py, data_api.py   # Dev's trend engine and cache
 │   └── data_pipeline.py      # Dev's data processing
 ├── frontend/                 # index.html, map.js, style.css, sample_data.json
-├── tests/                    # 59 tests
+├── tests/                    # 77 tests
 ├── docs/                     # EVIDENCE.md, MODEL2.md
 ├── Dockerfile, docker-compose.yml   # Optional
 └── requirements.txt
@@ -318,7 +323,8 @@ FieldShift Forecast
 - GET /api/pilot, pilot field, coordinates, soil, real POWER grid cells, trial site
 - GET /api/detect/{cell_id}, trend verdict for the Detect screen
 - GET /api/predict/{field_id}, normal, 2012 dry and 2035 dry scenarios
-- GET /api/rotation/{field_id}?scenario=&must_grow=&need_bu=, rotations with the trial yield index, dry and normal ranks, verified yields, soil line and quantity check
+- GET /api/rotation/{field_id}?scenario=&must_grow=&need_bu=, rotations with the trial yield index, crop, dry and normal ranks, every yield figure, revenue, soil line and quantity check, each with its arithmetic
+- GET /api/crops/{field_id}, other crops, suitability only
 - GET /api/trend/{cell_id} and GET /api/series/{cell_id}, Dev's raw trend and monthly series
 
 ### Database
@@ -383,10 +389,10 @@ Toronto view, zoom to the Harrow area. "This farmer near Harrow, Ontario has to 
 "Temperature here is up 0.75 C per decade since 1981. The cell to the north agrees, and so does a 1991 start. Rainfall shows no clear trend, and July soil moisture is not significant yet. We say that too."
 
 **35 to 55 seconds, Predict**
-"Replay 2012, a real dry year. Summer rain was 109 mm below normal and it was 1.75 C warmer. Rain covered only 40 to 63 percent of what corn needs. Add the warming trend for 2035 and it is 3.5 C above normal. FAO's own 2035 view lowers corn from 97.9 to 93.5."
+"Replay 2012, a real dry year. Two NASA rain datasets agree it was drier: 55 to 108 mm less summer rain. It was much hotter, 1698 degree days against 1438, and the deep soil was drier in July. Rain covered 40 to 83 percent of what corn needs. Add the warming trend for 2035 and it is 3.5 C above normal. FAO's own 2035 view lowers corn from 97.9 to 93.5."
 
 **55 to 75 seconds, Plan**
-"Pick the crop you must grow. Say corn. Only rotations with corn come back, ranked by the 2012 dry year. In the trial, corn after soybean and wheat with red clover gave 169 bu/ac, against 118 in continuous corn, 43 percent more. In drought years diverse rotations lost at least 14 percent less corn. Tell us you need 160 bu/ac and the corn-soy rotation, at 154, falls 6 short. Soil carbon is 2.25 percent in corn, soy, wheat, against just under 2 in continuous soy. The global soil model says 6.6 percent; the local trial measured 2.0 to 2.25, and we use the local measurement."
+"Pick the crop you must grow. Say corn. Only rotations with corn come back, ranked by corn's trial yield. Corn after soybean and wheat with red clover gave 169 bu/ac, against 118 in continuous corn, 43 percent more. In drought years at US trial sites, diverse rotations gave corn at least 14 percent more. Tell us you need 160 bu/ac and corn-soy, at 154, falls 6 short. That is per acre in a corn year, one year in three. Open 'Show the math' and every number traces to its source."
 
 **75 to 90 seconds, close**
 "We are not replacing your experience. We give you 45 years of measured change, a real dry-year replay, and trial evidence with a source under every number."
@@ -403,15 +409,16 @@ A farmer near Harrow, Ontario has to pick a rotation that will work in 2035, not
 
 Assumptions and limitations, to show in the demo and in the submission:
 
-- The trial is at Woodslee, about 25 km from the pilot point and in a different POWER grid cell. Trial numbers are evidence for the area, not a yield promise for this field.
-- The pilot point and field polygon are not a confirmed farm field.
-- Soil texture and pH are an HWSD2 regional estimate, not a field soil test. SoilGrids had no valid values at this point. Soil carbon uses the local trial measurement, 2.0 to 2.25 percent, not the HWSD2 global model value of 6.6 percent. Sampling depth is not stated in the trial source.
+- The trial is at Woodslee, about 26 km from the field and in a different POWER grid cell. Trial numbers are evidence for the area, not a yield promise for this field.
+- The field is a 300 m SAMPLE square of cropland from ESA WorldCover, not a surveyed farm field.
+- Soil texture and pH are SoilGrids modelled values at the field, not a field soil test. Soil carbon uses the local trial measurement, 2.0 to 2.25 percent, not the HWSD2 global model value of 6.6 percent. Sampling depth is not stated in the trial source.
 - Kaggle Crop Recommendation and SF24 are mostly India and tropical crops. They have maize but no wheat or soybean. They are not used for scores yet.
 - GAEZ is a 5 arc-minute grid, about 9 to 10 km, not field level. Its scores are a suitability index, not a percent.
 - POWER is a 0.5 by 0.625 degree grid. It describes the region, not a field microclimate.
 - May to September is the corn and soybean window from the OMAFRA 2017 calendar as supplied (not checked here). Winter wheat grows late August to July, so its water check is not computed.
 - The 2035 view applies the measured temperature trend to 2012. Rain is not extrapolated because its trend is inconclusive. It is a stress test, not a forecast.
-- Wheat yields are not available. Corn-soy-wheat corn (164 bu/ac) is derived from two stated figures. Trial yields are historical, not a forecast. Revenue is gross, with a dated price. There is no profit figure. The field polygon is SAMPLE; the trial site is a point, Woodslee, 42 degrees 13 minutes N, 82 degrees 44 minutes W.
+- Corn-soy-wheat corn (164 bu/ac) is derived from two stated figures. Five-year and long-term trial averages cover different years and are shown side by side. Trial yields are historical, not a forecast. Revenue is gross, with a dated price. There is no profit figure. The trial site is a point, Woodslee, 42 degrees 13 minutes N, 82 degrees 44 minutes W.
+- Kaggle and SF24 are used only for a climate check on other crops. Their rows are mostly from India, and rainfall is not used because its period is unknown.
 - Hydrology Time Series Viewer was reported failing Nov 13 to 14, 2026, HTTP 500. We used POWER and GLDAS directly.
 
 Future work, the limited-data framing:

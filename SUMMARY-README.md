@@ -6,7 +6,7 @@ This file is the full context for teammates and for any AI assistant helping on 
 
 The short, presentable version is README.md. Jobs and owners are in TASKS.md.
 
-Last updated Sat Nov 14, 2026, evening. All four branches are integrated on `ved/model`, not yet on main.
+Last updated Sat Nov 14, 2026, late night. All four branches are integrated on `ved/model`, not yet on main.
 
 ---
 
@@ -96,7 +96,11 @@ This replaces the OMAFRA range fallback in 3b. Vedant's evidence audit (docs/EVI
 - The 2012 dry year keeps the baseline score and shows measured stress beside it. No source gives a crop response for one dry season
 - Beside each score: May to September rain against the FAO crop water need, and soil pH against the OMAFRA target. These are shown, never blended into the score
 - Scenarios come from Dev's data. Normal is 1991-2020. Dry is 2012. 2035 dry is 2012 plus the measured temperature trend. Rain is not extrapolated because its trend is inconclusive
-- Pilot point stays at 42.0356, -82.9183. The trial site is about 25 km away at Woodslee, in a different POWER cell. Say so wherever trial numbers appear
+- Field moved Sat Nov 14 night from 42.0356, -82.9183 (Harrow town, built-up) to 42.0337, -82.9287, a 300 m SAMPLE square that is 95 percent cropland on ESA WorldCover 2021. Same POWER, GLDAS and IMERG cells and the same GAEZ pixel, so cached data is unchanged. The trial site is about 26 km away at Woodslee, in a different POWER cell. Say so wherever trial numbers appear
+- Soil texture and pH come from SoilGrids 250 m at the field (valid there, unlike the town point). Soil carbon comes from the trial, 2.0 to 2.25 percent
+- Rain uses two NASA sources, POWER and IMERG, shown as a range. 2012 was 55 to 108 mm drier than normal and much hotter, but dry spells were not longer
+- Long-term trial averages (Agomoh et al. 2020, 2021) are shown beside the 5-year trial figures and never averaged with them. Essex 2025 winter wheat is a regional line only
+- Bowles et al. 2020 drought result is from US sites only. Say so
 
 ## 4. Decision locked, Avenue 1 Harrow is main
 
@@ -302,13 +306,13 @@ Decision. Do Harrow deep, not global shallow. Build the method so it can go glob
 
 ## 14. Open items
 
-- Pilot point 42.0356, -82.9183 is kept. The field polygon is still SAMPLE. The trial site is about 25 km away (section 3c)
+- Field is a SAMPLE cropland square at 42.0337, -82.9287 (section 3c). The trial site is about 26 km away
 - Prices are chosen: Grain Farmers of Ontario, September 2026 (docs/EVIDENCE.md)
-- Corn and wheat trial yields are not verified. Only soybean yields are (docs/EVIDENCE.md)
+- Corn yields are sourced (Top Crop Manager 2021), soybean and wheat have 5-year and long-term trial figures. See docs/VERIFY.md
 - Rotation benefit and soil penalty weights have no source, so the overall rotation score stays pending
 - The climate adjustment for yield stays 1. Climate shows through Model 1 and the stress facts instead
-- HWSD2 topsoil organic carbon (about 6.6 percent) does not match the trial's 2 to 2.25 percent
-- The May to September window needs a crop calendar source. Winter wheat grows October to July
+- Soil carbon decided: use the trial's 2.0 to 2.25 percent, not HWSD2's 6.6 percent
+- Crop calendar now quotes OMAFRA Pub 811. Corn and wheat harvest months were not found as a calendar
 - July soil moisture trend is not significant (2000 to 2025). Do not claim it is falling
 
 ## 14b. Gaps found in review, Sat 2 PM

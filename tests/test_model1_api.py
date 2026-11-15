@@ -246,6 +246,18 @@ class ApiTests(unittest.TestCase):
         self.assertIn("US sites only", t)
         self.assertIn("88.9", t)
 
+    def test_other_crops_are_suitability_only(self):
+        j = self.c.get("/api/crops/harrow").json()
+        crops = {c["crop"]: c for c in j["crops"]}
+        self.assertEqual(len(crops), 21)                                   # every Kaggle crop except maize
+        self.assertEqual(crops["Chickpea"]["gaez"]["si_2001_2020"], 75.81)
+        self.assertEqual(crops["Watermelon"]["gaez"]["si_2001_2020"], 0.0)
+        self.assertIsNone(crops["Lentil"]["gaez"])                        # no GAEZ v5 layer
+        self.assertIn("soybean", crops["Kidney beans"]["evidence_note"])  # white mould advice
+        for c in crops.values():
+            self.assertIn("suitability only", c["label"])
+            self.assertNotIn("yield_bu_ac", c)
+
     def test_bad_inputs(self):
         self.assertEqual(self.c.get("/api/rotation/nope").status_code, 404)
         self.assertEqual(self.c.get("/api/rotation/harrow?scenario=wet").status_code, 422)

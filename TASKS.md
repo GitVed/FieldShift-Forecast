@@ -8,7 +8,7 @@ Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we wo
 
 ## Status, Sat evening
 
-Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 59 tests pass. It is not on main yet.
+Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 77 tests pass. It is not on main yet.
 
 Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/frontend/?api=1
 
@@ -34,14 +34,24 @@ Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:a
 - Rotations come back ranked by the 2012 dry year (`rank` = `rank_dry`), with `rank_normal` beside it
 - Only new fields were added. Nothing in Shlok's shape was renamed or removed. See README section 5
 
+**Done Sat late night**
+- Field moved 0.9 km west onto cropland (ESA WorldCover 95 percent cropland). Same NASA cells and GAEZ pixel, so data unchanged. SoilGrids now valid at the field and used for pH and texture
+- Second NASA rain source (IMERG), daily dry spells, heavy-rain days, degree days, GLDAS root-zone moisture, data quality line
+- Long-term trial soybean and wheat (Agomoh et al. 2020 and 2021) beside the 5-year figures; Essex 2025 winter wheat 96.9 bu/ac as a regional line
+- Picked crop ranks by its own trial yield; scenario selector on Plan; math and sources folded under each card; revenue on every rotation
+- Bowles wording fixed (US sites only); crop calendar now quotes OMAFRA Pub 811
+- Other 21 Kaggle crops: `GET /api/crops/harrow` and an "Explore other crops" panel, suitability only
+- Checks: `docs/VERIFY.md` (hand-check tables) and `docs/claude-gap-findings.md` (Muse report check)
+
+**API params on `/api/rotation/harrow`**: `scenario` (normal, dry, 2035_dry or future), `must_grow` (soybean, maize or corn, wheat), `need_bu` (your bu/ac target). Only new fields were added to Shlok's shape.
+
 **Still UNVERIFIED or not available (owner: you)**
-1. Wheat yields: not in any checked source, so they show not available
-2. Corn yield period: the article gives no period for the 2001-trial corn figures
-3. Soil carbon sampling depth (0 to 20 cm) and the "woodlot about 6 percent" comparison: not in the source
-4. OMAFRA 2017 crop calendar: link not recorded, not checked
-5. "Diverse means corn plus two other crops" for the drought evidence: our reading of Bowles et al.
-6. A real field polygon, if one is wanted. The SAMPLE polygon stays until then
-7. Pitch slides and submission, then merge `ved/model` to main
+1. Corn yield period: the Top Crop Manager article gives no period for the 2001-trial corn figures
+2. Soil carbon sampling depth and the "woodlot about 6 percent" comparison: not in the source
+3. Corn and winter wheat harvest months: not found as a calendar in Pub 811
+4. Our "corn plus two other crops" diversity rule is a simplification of Bowles et al.'s index
+5. Ridgetown trial (2012-2017, wheat 112-114 bu/ac) found but not added, because it is a different site
+6. Pitch slides and submission, then merge `ved/model` to main
 
 ---
 
