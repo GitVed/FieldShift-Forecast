@@ -46,7 +46,7 @@ def seed(engine=None, root=ROOT):
             if r['source_id'] not in sources: raise ValueError('Unknown source: '+r['source_id'])
             if r['cell_id'] not in manifest['resolved_cells']: raise ValueError('Unknown cell: '+r['cell_id'])
         inventories.append((name,records))
-    trends=build_trends(root)
+    trends=build_trends(root, write=False)  # never rewrite tracked CSVs during seeding
     db.metadata.create_all(engine)
     with engine.begin() as conn:
         for sid,details in sources.items():

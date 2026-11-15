@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from backend import db
 
-ALIASES={'harrow':'power_harrow_point','north':'power_north_point'}
+ALIASES={'harrow':'power_harrow_point','harrow-power':'power_harrow_point','north':'power_north_point'}
 
 def make_router(engine=None):
     engine=engine or db.get_engine()

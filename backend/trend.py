@@ -57,7 +57,8 @@ def analyze(rows, variable, start_year=1981, end_year=2025):
                   confidence='significant at 95% threshold' if significant else 'not significant at 95% threshold')
     return result
 
-def run(root=ROOT):
+def run(root=ROOT, write=True):
+    """write=False computes trends in memory only (used by backend.seed)."""
     results=[]
     manifest=load_manifest(root)
     for cell,files in FILES.items():
@@ -80,6 +81,8 @@ def run(root=ROOT):
         r['sensitivity_check']='supported' if directional and sensitivity['direction']==r['direction'] else 'inconclusive'
         r['verdict']=r['direction'] if r['buddy_check']=='supported' and r['sensitivity_check']=='supported' else 'inconclusive'
         r['confidence_note']='Statistical significance threshold; not a forecast probability. Nearby cells are spatially correlated.'
+    if not write:
+        return results
     output=Path(root)/'data/seed/trend_results.csv'
     write_csv(output,results)
     manifest.setdefault('derived_datasets',{})['data/seed/trend_results.csv']=dict(
