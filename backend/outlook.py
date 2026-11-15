@@ -283,6 +283,11 @@ def water_advice(row,selected,crops):
         meaning=f'About {display_low}–{display_high} mm of rain for every 100 mm the assessed crops may need.',
         action='Check soil water and irrigation before committing to this rotation.' if low<100 else 'Check soil storage and drainage before relying on rainfall alone.',
         range_explanation=('Range combines different crop water needs and climate-model spread.' if projected else 'Range reflects different crop water needs.'),
+        range_parts=(f'The low end, {display_low}%, compares rain with the top of the FAO water-need range of the thirstiest assessed crop. '
+                     f'The high end, {display_high}%, compares it with the bottom of the range of the least thirsty one'
+                     +(', across the 5 climate models. ' if projected else '. ')
+                     +('Above 100% means rain alone may cover that need. ' if display_high>=100 else '')
+                     +'It is not a cap and not a chance of success.'),
         assessed_crops=assessed,unassessed_crops=unassessed,
         caution='Rain only; excludes soil water storage and irrigation. Not a chance of success.')
 

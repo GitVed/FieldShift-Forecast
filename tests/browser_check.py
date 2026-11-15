@@ -30,11 +30,14 @@ def run(url,historical_preview=False):
         expect(page.locator('.rotation-card')).to_have_count(1)
         expect(page.locator('#data-badge')).to_contain_text('observation' if historical_preview else 'projected')
         assert page.locator('.leaflet-overlay-pane > svg').evaluate('(e)=>e.getBoundingClientRect().width')>200, 'Map overlay SVG clipped by icon CSS'
-        expect(page.locator('#option-count')).to_have_text('Option 1 of 3')
+        expect(page.locator('#option-count')).to_have_text('Option 1 of 4')  # all 4 trial rotations, none hidden
+        expect(page.locator('.rotation-card .score-basis')).to_contain_text('Based on')
+        expect(page.locator('.rotation-card .dry-rank')).to_contain_text('2012 dry-year rank')
+        expect(page.locator('.rotation-card')).not_to_contain_text('100% of needs')
         first=page.locator('.rotation-card').get_attribute('data-rotation-id')
-        page.locator('#next-option').click();expect(page.locator('#option-count')).to_have_text('Option 2 of 3')
+        page.locator('#next-option').click();expect(page.locator('#option-count')).to_have_text('Option 2 of 4')
         assert page.locator('.rotation-card').get_attribute('data-rotation-id')!=first
-        page.locator('#next-option').click();expect(page.locator('#next-option')).to_be_disabled()
+        page.locator('#next-option').click();page.locator('#next-option').click();expect(page.locator('#option-count')).to_have_text('Option 4 of 4');expect(page.locator('#next-option')).to_be_disabled()
         page.locator('[data-option="0"]').click();expect(page.locator('#previous-option')).to_be_disabled()
         expect(page.locator('#locate-field,#reset-map,#print-plan,.brand,.rail-avatar,#map-sources,#recommendation-method,#climate-context')).to_have_count(0)
         expect(page.locator('#location-select option')).to_have_count(2)
@@ -96,6 +99,9 @@ def run(url,historical_preview=False):
         expect(page.locator('#panel-body')).to_have_attribute('aria-busy','false')
         assert page.locator('.rotation-card').get_attribute('data-rotation-id')=='corn-soy-wheat'  # 64 meets 60, must not rank last
         expect(page.locator('.target-check')).to_contain_text('Depends on the figure')
+        expect(page.locator('#option-count')).to_have_text('Option 1 of 4')  # Corn-soy stays in the soy target check
+        for _ in range(3):page.locator('#next-option').click()
+        expect(page.locator('.rotation-card[data-rotation-id="corn-soy"] .target-check')).to_contain_text('10.9')
         page.locator('#yield-target').fill('-5');assert not page.locator('#yield-target').evaluate('(el)=>el.checkValidity()')
         page.locator('#reset-priority').click();expect(page.locator('#yield-target')).to_have_value('')
         expect(page.locator('#panel-body')).to_contain_text('Choose a crop')

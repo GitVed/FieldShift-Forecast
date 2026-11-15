@@ -258,3 +258,8 @@ input[type=range]::-moz-range-thumb { box-sizing:border-box; width:17px; height:
 @media(max-width:600px) { .crop-sequence { flex:none; min-height:90px; } }
 .dashboard>.trend-card{grid-column:1 / -1;margin:0}
 .crop-note{font-size:11px;line-height:1.6;color:#7b8e74;margin:8px 0}
+.water-need-mark{position:absolute;top:-3px;height:15px;width:2px;background:#3f6739}
+.water-parts{font-size:10px;line-height:1.6;color:#7d8b70;margin:6px 0 8px}
+.score-basis{font-size:10px;line-height:1.6;color:#7d8b70;margin:6px 0 0}
+.dry-rank{font-size:10px;line-height:1.6;color:#6a5524;background:#fbf8ee;border-radius:8px;padding:7px 9px;margin:8px 0 0}
+.dry-rank strong{font-weight:600}

@@ -289,6 +289,22 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.c.get("/api/rotation/harrow?scenario=wet").status_code, 422)
         self.assertEqual(self.c.get("/api/detect/elsewhere").status_code, 404)
 
+    def test_score_basis_dry_rank_and_soy_target_cover_all_four(self):
+        r = self.c.get("/api/recommendations/harrow?year=2026&must_grow=soybean&need_bu=60").json()["rotations"]
+        self.assertEqual(len(r), 4)
+        cs = [x for x in r if x["id"] == "corn-soy"][0]
+        self.assertEqual(cs["quantity"]["best_bu_ac"], 49.1)
+        self.assertEqual(cs["quantity"]["best_shortfall_bu_ac"], 10.9)
+        for x in self.c.get("/api/recommendations/harrow?year=2026").json()["rotations"]:
+            used = {b["crop"] for b in x["score_breakdown"]}
+            self.assertFalse(used & set(x["score_crops_missing"]))
+            self.assertIn("Based on", x["score_basis"])
+            self.assertEqual(x["rank_dry_of"], 4)
+            self.assertIn("lower trial score can rank higher", x["rank_dry_reason"])
+            self.assertIn("not a cap", x["water_advice"]["range_parts"])
+        clover = [x for x in self.c.get("/api/recommendations/harrow?year=2026").json()["rotations"] if x["id"] == "corn-soy-wheat-clover"][0]
+        self.assertEqual(clover["score_crops_missing"], ["Soy", "Wheat"])
+
 
 if __name__ == "__main__":
     unittest.main()

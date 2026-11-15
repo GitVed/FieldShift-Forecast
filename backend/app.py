@@ -502,6 +502,26 @@ def _score_calc(result):
         if b["trial_index_excluded"] else "")
 
 
+def _score_parts(result):
+    """Per-crop trial index behind the score, and which crops it leaves out.
+    The score is only comparable between rotations scored on the same crops."""
+    b = result["breakdown"]
+    refs = result["yield_references"]
+    best = b["trial_best_yield"]
+    used = [{"crop": CROP_DISPLAY[c], "trial_bu_ac": refs[c]["value"], "best_bu_ac": best[c], "index": v}
+            for c, v in b["trial_index_by_crop"].items()]
+    missing = [CROP_DISPLAY[c] for c in b["trial_index_excluded"]]
+    names = [u["crop"] for u in used]
+    if not used:
+        basis = "No score. No crop in this rotation has a 5-year trial yield."
+    else:
+        basis = f"Based on {' and '.join(names)}{' only' if missing else ''}."
+        if missing:
+            basis += (f" {' and '.join(missing)} {'has' if len(missing) == 1 else 'have'} no 5-year trial yield, "
+                      f"so the score leaves {'it' if len(missing) == 1 else 'them'} out. Compare scores only between rotations scored on the same crops.")
+    return used, missing, basis
+
+
 def _gain_calc(result):
     gains = result["breakdown"].get("trial_gain_vs_continuous_pct") or {}
     refs = result["yield_references"]
@@ -567,6 +587,9 @@ def rotation_scores(field_id: str, scenario: str = Query("normal"),
             "rank_normal": None, "rank_dry": None, "rank_for_crop": None,
             "score_kind": "trial yield index: trial yield / best trial yield for that crop x 100",
             "score_calc": _score_calc(res),
+            "score_breakdown": _score_parts(res)[0],
+            "score_crops_missing": _score_parts(res)[1],
+            "score_basis": _score_parts(res)[2],
             "trial_gain_vs_continuous_pct": {stress.MODEL2_TO_API[c]: g for c, g in
                                              res["breakdown"]["trial_gain_vs_continuous_pct"].items()},
             "gain_calc": _gain_calc(res),
@@ -593,6 +616,10 @@ def rotation_scores(field_id: str, scenario: str = Query("normal"),
     dry_ranks = stress.dry_rank(rotations)
     for r in rotations:
         r["rank_dry"] = dry_ranks[r["id"]]
+        r["rank_dry_of"] = len(rotations)
+        r["rank_dry_reason"] = ("2012 dry-year order: drought evidence first (Bowles et al. 2020, US sites), then how much of "
+                                "the crop water need the 2012 rain covered, then the trial score. So a rotation with a lower "
+                                "trial score can rank higher in the dry year.")
     if crop:
         # Picked crop first: its trial yield (missing goes last), then the dry-year evidence.
         order = sorted(rotations, key=lambda r: (r["picked_crop_evidence"] != "trial",
