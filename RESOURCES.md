@@ -39,3 +39,26 @@ These are still available to the model owner; they are not claimed as completed 
 - [FAO GAEZ v5](https://www.fao.org/gaez/en): downloaded rainfed/high-input historical suitability maps, 2001–2020. [Maize](https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX30AS/GAEZ-V5.RES05-SXX30AS.HP0120.AGERA5.HIST.MZE.HRLM.tif), [soy](https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX30AS/GAEZ-V5.RES05-SXX30AS.HP0120.AGERA5.HIST.SOY.HRLM.tif), [wheat](https://storage.googleapis.com/fao-gismgr-gaez-v5-data/DATA/GAEZ-V5/MAPSET/RES05-SXX30AS/GAEZ-V5.RES05-SXX30AS.HP0120.AGERA5.HIST.WHE.HRLM.tif). Field suitability values were not extracted; global raster archives were removed during cleanup.
 - [OMAFRA Agronomy Guide](https://www.ontario.ca/files/2022-10/omafra-agronomy-guide-for-field-crops-en-2022-10-13.pdf): crop requirement fallback. Ved/Vedant must confirm rainfall range periods before using them.
 - [NASA challenge resource page supplied by the user](https://www.spaceappschallenge.org/2026/challenges/adapting-farms-with-nasa-data/?tab=resources). SMAP, Landsat/MODIS, SRTM, ECOSTRESS and other listed sources are not required for these numerical Dev inputs. U.S.-only soil/crop resources do not establish coverage in Harrow, Ontario.
+
+## NASA annual climate outlook data
+
+The Harrow 2026–2030 outlook uses [NASA NEX-GDDP-CMIP6 v2](https://www.nccs.nasa.gov/data-collections/nex-gddp-cmip6/) through NASA's THREDDS NetCDF Subset service. Only the nearest point to 42.0356, −82.9183 is requested; global files are not downloaded.
+
+| Item | Dataset details |
+|---|---|
+| Variables | `tas` temperature (K → °C), `pr` precipitation flux (kg/m²/s × 86,400 → daily mm, summed per month), `hurs` relative humidity (%) |
+| Models | ACCESS-CM2, CanESM5, MIROC6, MPI-ESM1-2-LR, MRI-ESM2-0; member r1i1p1f1 |
+| Experiments | Historical 1991–2014; SSP370 2015–2030, matching the existing GAEZ future-period emissions scenario |
+| Calibration | Align each model's monthly 1991–2014 climatology with POWER: additive temperature/humidity change; precipitation ratio. This is monthly delta-change alignment, not a trained weather model. |
+| Comparison | 2015–2025 held-out monthly climatologies compared with POWER. Bias and climatology RMSE are recorded; these are not measures of year-specific weather prediction skill. |
+| Annual display | May–September temperature/humidity means and rain totals. Median and full spread across complete models; at least three required. Winter-wheat water requirements are not evaluated over this window. |
+| Soil | No future soil moisture or changing pH/texture is synthesized. Historical July GLDAS and static HWSD2 remain separate datasets. |
+| Physical limits | Source RH excursions within the NASA-documented slight overshoot range are bounded to 0–100; counts are retained per source. Adjusted humidity is also bounded. Negative precipitation, missing/duplicate dates, wrong units and wrong point coordinates are rejected. |
+
+`data/seed/nex_monthly_harrow.csv` retains the monthly point extractions for 1991–2030. `data/seed/nex_adjusted_harrow.csv` retains aligned 2015–2030 monthly model values. `data/metadata/projection_sources.csv` records every actual request URL, response hash, version, grid centre, calendar, units and humidity clipping count. `data/metadata/projection_validation.csv` holds the climatology comparison. Current CSV hashes and calibration policy are recorded in `sources.csv`.
+
+CF calendars and valid days per month are checked before aggregation. The regional source grid is 0.25°; its coverage is not field-scale resolution. A future annual value is an uninitialized climate-model scenario, not a prediction of the weather that will occur in that year. Ensemble spread is not a probability or confidence interval. These data do not establish future yields or profits.
+
+## Satellite imagery used as a basemap
+
+[Esri World Imagery](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer) supplies satellite/aerial map tiles for geographic context. Attribution: Esri, Vantor, Earthstar Geographics and the GIS User Community. Imagery is not treated as a historical or forecast climate measurement; NASA grid overlays retain their own dates and resolution. Tiles load on demand and are not bundled or exported. If tiles are unavailable, the source grids and data controls remain usable.

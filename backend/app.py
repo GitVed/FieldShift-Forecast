@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend import field_profile, rotation, stress, suitability
@@ -56,6 +57,14 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="FieldShift Forecast API", lifespan=lifespan)
+
+from backend.outlook import router as outlook_router  # noqa: E402  (Dev's timeline and recommendations)
+app.include_router(outlook_router)
+
+
+@app.get("/", include_in_schema=False)
+def home():
+    return RedirectResponse("/frontend/")
 
 try:
     from backend.data_api import make_router
@@ -378,6 +387,7 @@ def _quantity(crop, need_bu, result, regional):
     years, total_years = result["crops"].count(crop), len(result["crops"])
     if not use:
         return {"crop": name, "need_bu_ac": need_bu, "trial_bu_ac": None, "meets": None, "shortfall_bu_ac": None,
+                "target_support": "no evidence", "best_bu_ac": None, "best_shortfall_bu_ac": None, "checks": [],
                 "evidence": "none", "text": "not available: no yield for this crop in this rotation",
                 "calc": "Not available, not estimated"}
     checks = []
@@ -387,11 +397,17 @@ def _quantity(crop, need_bu, result, regional):
                        "shortfall_bu_ac": None if ok else round(need_bu - e["value"], 1),
                        "per_year_average_bu_ac": round(e["value"] * years / total_years, 1)})
     meets = True if all(c["meets"] for c in checks) else False if not any(c["meets"] for c in checks) else None
+    # target_support: "all" figures meet the target, "some" do, or "none" do.
+    # "meets" keeps its old meaning (None = the figures disagree).
+    support = "all" if meets is True else "none" if meets is False else "some"
+    best = max(c["bu_ac"] for c in checks)
     text = "; ".join((f"{c['label']} {c['bu_ac']:g} bu/ac meets {need_bu:g}" if c["meets"]
                       else f"{c['label']} {c['bu_ac']:g} bu/ac, short by {c['shortfall_bu_ac']:g}") for c in checks)
     verdict = "Yes" if meets else "No" if meets is False else "Depends on the figure"
     first = checks[0]
     return {"crop": name, "need_bu_ac": need_bu, "meets": meets, "checks": checks,
+            "target_support": support, "best_bu_ac": best,
+            "best_shortfall_bu_ac": None if best >= need_bu else round(need_bu - best, 1),
             "trial_bu_ac": first["bu_ac"] if trial else None,
             "regional_bu_ac": None if trial else first["bu_ac"],
             "shortfall_bu_ac": first["shortfall_bu_ac"], "evidence": use[0]["kind"],
