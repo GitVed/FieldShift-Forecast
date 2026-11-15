@@ -1,0 +1,13 @@
+# Stage 1 data processing; Python 3.9+.
+numpy==2.0.2
+netCDF4==1.7.2
+rasterio==1.4.3
+access-parser==0.0.6
+scipy==1.13.1
+pymannkendall==1.4.3
+SQLAlchemy==2.0.41
+psycopg[binary]==3.2.9
+fastapi==0.115.14
+pydantic==2.13.5
+uvicorn==0.34.3
+httpx==0.28.1

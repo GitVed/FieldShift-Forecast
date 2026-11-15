@@ -1,0 +1,2 @@
+# Preserve CSV bytes so provenance hashes match on every platform.
+*.csv -text -whitespace
