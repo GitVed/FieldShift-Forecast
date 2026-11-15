@@ -1,16 +1,27 @@
-"""Model 1 stub: suitability percent per crop for the Harrow field.
+"""Model 1: crop suitability for the Harrow field. Owner: Ved.
 
-STATUS: stub. Runs on a SAMPLE profile. No Random Forest yet.
+Method, decided Sat Nov 14 ("sourced only"). Every number has a source.
 
-Rules (SUMMARY-README section 3b, CLAUDE.md):
-- GAEZ is the primary source for wheat, soybean and maize. It is a fixed
-  baseline per crop. It is NOT used as the dry-year or 2035 scenario score.
-- Range fit (OMAFRA ranges, UNVERIFIED) drives the scenarios, because it uses
-  temperature and rainfall, so it changes when the climate inputs change.
-- Kaggle is only for maize and general rules. Never wheat or soy. Not built yet.
-- If a crop has no usable source, it is NOT scored. Nothing is invented.
-- No P or K. Inputs: temperature, rainfall, humidity, pH, nitrogen,
-  soil moisture, soil organic carbon, sand, silt, clay.
+Score per crop (0 to 100, GAEZ Suitability Index, not a percent):
+- normal:   GAEZ v5, 2001-2020, rain-fed high input.
+- 2035_dry: GAEZ v5, 2021-2040 SSP370 ensemble, rain-fed high input. This is
+            FAO/IIASA's own future-climate suitability; 2035 falls inside it.
+            It reflects average future climate, not a dry year, so the dry-year
+            facts are shown beside it.
+- dry:      the 2012 replay has no sourced crop response for a single season,
+            so the score is NOT recomputed. The GAEZ baseline is shown with
+            scenario_applied False, next to the measured stress facts.
+
+Checks shown beside the score (not blended into it):
+- water: May-Sep rain against FAO whole-growing-period crop water need
+  (FAO Irrigation Water Management, Crop Water Needs, Table 5). Rain only,
+  ignores soil storage. Not computed for winter wheat, which grows Oct-Jul.
+- pH: HWSD2 topsoil pH against OMAFRA target pH for fine-textured soils
+  (OMAFRA Soil Fertility Handbook, Table 3-1). HWSD2 is a regional estimate.
+
+The earlier OMAFRA temperature and rain ranges were removed: Vedant's evidence
+audit (docs/EVIDENCE.md) found no source for them.
+Kaggle and SF24 are not used yet (maize and general rules only, later).
 """
 import csv
 import os
@@ -20,17 +31,24 @@ GAEZ_CSV = os.path.join(HERE, "..", "data", "seed", "gaez_harrow.csv")
 
 CROPS = ["wheat", "soybean", "maize"]
 
-# OMAFRA ranges supplied by Ved. UNVERIFIED until Vedant checks the source.
-# Open questions: which period the mm values cover, and which temperature
-# (growing season mean?) the C range applies to.
-# Maize has no range supplied, so it cannot be scored by this fallback.
-RANGES = {
-    "wheat": {"ph": (6.0, 7.5), "rain_mm": (350, 650), "temp_c": (10, 25)},
-    "soybean": {"ph": (6.0, 7.0), "rain_mm": (450, 700), "temp_c": (20, 30)},
+GAEZ_PERIODS = {
+    "baseline": "2001-2020 rain-fed high input",
+    "future": "2021-2040 rain-fed high input SSP370 ENSEMBLE",
+    "history": "1981-2000 rain-fed high input",
 }
+GAEZ_BASELINE_SCENARIO = GAEZ_PERIODS["baseline"]
+GAEZ_LABEL = "GAEZ v5 SI 0-100, rain-fed high input, 2001-2020"
+GAEZ_FUTURE_LABEL = "GAEZ v5 SI 0-100, rain-fed high input, 2021-2040 SSP370 ensemble"
+DRY_BASELINE_LABEL = "GAEZ baseline, dry scenario not applied"
 
-# SAMPLE profile. Placeholder values for testing the code. Not Harrow data.
-# Replace with Dev's cached POWER and SoilGrids values when they exist.
+FAO_WATER_SOURCE = "https://www.fao.org/4/s2022e/s2022e02.htm"
+FAO_WATER_NEED_MM = {"wheat": (450, 650), "soybean": (450, 700), "maize": (500, 800)}
+OMAFRA_PH_SOURCE = "https://files.ontario.ca/omafra-soil-fertility-handbook-en-2022-10-13.pdf"
+OMAFRA_TARGET_PH_FINE = {"wheat": 6.0, "soybean": 6.0, "maize": 5.5}
+
+SCENARIOS = ("normal", "dry", "2035_dry")
+
+# SAMPLE profile for tests and offline fallback only. Not Harrow data.
 SAMPLE_PROFILE = {
     "label": "SAMPLE",
     "temp_c": 18.0,
@@ -46,17 +64,8 @@ SAMPLE_PROFILE = {
 }
 
 
-# The GAEZ csv has one row per crop per period. The baseline uses one period.
-# Chosen by Claude as the latest historical period. Ved to confirm.
-# The 2021-2040 SSP370 rows are NOT used as the scenario score. Range fit
-# drives the dry and 2035 scenarios (decision, Sat Nov 14).
-GAEZ_BASELINE_SCENARIO = "2001-2020 rain-fed high input"
-
-
 def load_gaez(path=GAEZ_CSV, scenario=GAEZ_BASELINE_SCENARIO):
-    """Return {crop: suitability} for the baseline period only.
-    UNVERIFIED rows are skipped. The value is the GAEZ suitability index (SI),
-    treated here as a 0 to 100 percent. The csv also has a suitability_class."""
+    """Return {crop: suitability index} for one GAEZ period. UNVERIFIED rows skipped."""
     out = {}
     if not os.path.exists(path):
         return out
@@ -71,81 +80,86 @@ def load_gaez(path=GAEZ_CSV, scenario=GAEZ_BASELINE_SCENARIO):
     return out
 
 
-def range_fit(crop, profile):
-    """Share of checked variables inside the crop's range, as a percent.
-    This is a range check, not model output. Returns None if not scorable."""
-    rng = RANGES.get(crop)
-    if rng is None:
-        return None
-    checks = []
-    for key, (lo, hi) in rng.items():
-        val = profile.get(key)
-        if val is not None:
-            checks.append(lo <= val <= hi)
-    if not checks:
-        return None
-    return 100.0 * sum(checks) / len(checks)
+def water_check(crop, profile):
+    """May-Sep rain as a share of the FAO crop water need range."""
+    rain = profile.get("rain_mm")
+    lo, hi = FAO_WATER_NEED_MM[crop]
+    base = {"need_mm": [lo, hi], "source": FAO_WATER_SOURCE,
+            "note": "Rain only. Ignores soil water storage. FAO need is crop evapotranspiration "
+                    "over the whole growing period."}
+    if crop == "wheat":
+        return {**base, "rain_mm": rain, "covers_pct": None,
+                "status": "not computed",
+                "note": "Winter wheat grows Oct-Jul, so the May-Sep rain window does not fit it."}
+    if rain is None:
+        return {**base, "rain_mm": None, "covers_pct": None, "status": "no rain data"}
+    return {**base, "rain_mm": round(rain, 1),
+            "covers_pct": [round(100 * rain / hi), round(100 * rain / lo)],
+            "status": "rain covers need" if rain >= lo else "rain below need"}
 
 
-GAEZ_LABEL = "GAEZ SI 0-100, rain-fed high input, 2001-2020"
-DRY_BASELINE_LABEL = "GAEZ baseline, dry scenario not applied"
+def ph_check(crop, profile):
+    ph = profile.get("ph")
+    target = OMAFRA_TARGET_PH_FINE[crop]
+    out = {"ph": ph, "target_ph": target, "source": OMAFRA_PH_SOURCE,
+           "note": "Target for fine-textured soils. Soil pH is an HWSD2 regional estimate."}
+    out["status"] = "no pH data" if ph is None else ("at or above target" if ph >= target else "below target")
+    return out
 
 
-def score_crops(profile, scenario="normal", gaez=None):
-    """Return {crop: dict(percent, source, gaez_baseline, scenario_applied, note)}.
-
-    "percent" is a 0 to 100 score. For GAEZ it is the Suitability Index (SI),
-    not a literal percent.
-
-    normal: GAEZ if available, else range fit, else not scored.
-    dry / 2035_dry: range fit drives the score. If a crop has no range (maize
-    for now), show the GAEZ baseline with scenario_applied False, clearly
-    labelled. Never invent a range. If neither exists, not scored.
-    """
+def score_crops(profile, scenario="normal", gaez=None, gaez_future=None):
+    """Return {crop: dict(percent, source, label, gaez_baseline, scenario_applied,
+    note, checks)}. Contract with Model 2 (TASKS.md V3) is unchanged."""
+    if scenario not in SCENARIOS:
+        raise ValueError(f"scenario must be one of {SCENARIOS}")
     gaez = load_gaez() if gaez is None else gaez
+    gaez_future = load_gaez(scenario=GAEZ_PERIODS["future"]) if gaez_future is None else gaez_future
     result = {}
     for crop in CROPS:
-        fit = range_fit(crop, profile)
         base = gaez.get(crop)
-        applied = True
-        if scenario == "normal" and base is not None:
+        future = gaez_future.get(crop)
+        applied, note = True, ""
+        if scenario == "normal":
             pct, src = base, GAEZ_LABEL
-        elif fit is not None:
-            pct, src = fit, "range fallback (UNVERIFIED OMAFRA ranges)"
-        elif base is not None:
+        elif scenario == "2035_dry":
+            if future is not None:
+                pct, src = future, GAEZ_FUTURE_LABEL
+                note = "Average 2021-2040 climate, not a dry year. See the dry-year facts."
+            else:
+                pct, src, applied = base, DRY_BASELINE_LABEL, False
+                note = "No GAEZ future value for this crop."
+        else:  # dry
             pct, src, applied = base, DRY_BASELINE_LABEL, False
-        else:
-            pct, src = None, None
-        note = ""
+            note = "No sourced crop response for a single dry season. See the dry-year facts."
         if pct is None:
-            note = "NOT SCORED. No GAEZ value and no range."
-        elif not applied:
-            note = "Scenario not applied. Needs a verified OMAFRA range (Vedant, VS1)."
-        result[crop] = {"percent": pct, "source": src, "gaez_baseline": base,
-                        "scenario_applied": applied, "note": note}
+            src, note = None, "NOT SCORED. No GAEZ value for this crop."
+        result[crop] = {
+            "percent": pct, "source": src,
+            "label": "CACHED" if pct is not None else "UNVERIFIED",
+            "gaez_baseline": base, "scenario_applied": applied, "note": note,
+            "checks": {"water": water_check(crop, profile), "ph": ph_check(crop, profile)},
+        }
     return result
 
 
 def main():
-    profile = SAMPLE_PROFILE
-    print(f"Model 1 suitability stub. Profile: {profile['label']}")
-    print("Inputs used: temp_c, rain_mm, ph (others not wired yet). No P or K.")
-    print("Scores are 0 to 100. GAEZ values are the Suitability Index, not a percent.")
-    for scenario in ("normal", "dry"):
-        print(f"\nScenario: {scenario}")
-        res = score_crops(profile, scenario)
-        for crop in CROPS:
-            r = res[crop]
-            if r["percent"] is None:
-                print(f"  {crop:8} NOT SCORED   {r['note']}")
-            else:
-                print(f"  {crop:8} {r['percent']:5.1f}   source: {r['source']}   [{profile['label']}]")
-        not_scored = [c for c in CROPS if res[c]["percent"] is None]
-        unapplied = [c for c in CROPS if res[c]["percent"] is not None and not res[c]["scenario_applied"]]
-        print("  Not scored:", ", ".join(not_scored) if not_scored else "none")
-        if unapplied:
-            print("  Scenario not applied (baseline shown):", ", ".join(unapplied))
-    print("\nAny rotation containing a not-scored crop must be shown as 'not scored'.")
+    try:
+        from field_profile import build_scenarios
+    except ImportError:
+        from backend.field_profile import build_scenarios
+    profiles = build_scenarios()
+    print("Model 1 suitability. Scores are the GAEZ Suitability Index (0-100), not a percent.")
+    for scenario in SCENARIOS:
+        p = profiles[scenario]
+        print(f"\n{p['title']} [{p['label']}]  May-Sep rain {p['rain_mm']:.0f} mm, "
+              f"May-Sep temp {p['temp_c']:.1f} C")
+        for crop, r in score_crops(p, scenario).items():
+            score = "NOT SCORED" if r["percent"] is None else f"{r['percent']:5.1f}"
+            w, ph = r["checks"]["water"], r["checks"]["ph"]
+            water = (f"rain covers {w['covers_pct'][0]}-{w['covers_pct'][1]}% of FAO need"
+                     if w["covers_pct"] else w["status"])
+            print(f"  {crop:8} {score}  {r['source']}{' | ' + r['note'] if r['note'] else ''}")
+            print(f"           water: {water} | pH {ph['ph']} vs target {ph['target_ph']}: {ph['status']}")
 
 
 if __name__ == "__main__":
