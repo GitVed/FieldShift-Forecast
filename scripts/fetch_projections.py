@@ -27,6 +27,7 @@ MODELS=('ACCESS-CM2','CanESM5','MIROC6','MPI-ESM1-2-LR','MRI-ESM2-0')
 VARIABLES={'tas':('temperature','degC'),'pr':('precipitation','mm/month'),'hurs':('humidity','%')}
 HOST='https://ds.nccs.nasa.gov/thredds/'
 LAT,LON=42.0356,-82.9183
+END_YEAR=2040   # outlook end; 2040 matches the GAEZ 2021-2040 period (extended Sun Nov 15)
 
 
 def get(url,limit=2000000):
@@ -105,17 +106,33 @@ def parse_point(body,model,var,year,url):
     return rows,entry
 
 
+def reusable():
+    """Rows and source records already published, if their hashes still match the manifest."""
+    import csv
+    info=load_manifest().get('projection_data',{});path=ROOT/'data/seed/nex_monthly_harrow.csv'
+    inventory=ROOT/'data/metadata/projection_sources.csv'
+    if not info or not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest()!=info.get('sha256'):return [],[],0
+    if hashlib.sha256(inventory.read_bytes()).hexdigest()!=info.get('source_inventory_sha256'):return [],[],0
+    rows=list(csv.DictReader(path.open(newline='')));sources=list(csv.DictReader(inventory.open(newline='')))
+    last=max(int(r['date'][:4]) for r in rows)
+    for r in rows:r['value']=float(r['value']);r['latitude']=float(r['latitude']);r['longitude']=float(r['longitude'])
+    return rows,sources,last
+
+
 def run(workers=4):
     cache=ROOT/'.cache/nex';cache.mkdir(parents=True,exist_ok=True)
+    kept_rows,kept_sources,kept_until=reusable()
+    if kept_until:print(f'Reusing {len(kept_rows)} published monthly rows and {len(kept_sources)} source records to {kept_until} (hashes verified)',flush=True)
     jobs=[]
     for model in MODELS:
         for var in VARIABLES:
-            for scenario,years in [('historical',range(1991,2015)),('ssp370',range(2015,2031))]:
+            for scenario,years in [('historical',range(1991,2015)),('ssp370',range(2015,END_YEAR+1))]:
                 entries=catalog(model,scenario,var)
                 for year in years:
+                    if year<=kept_until:continue
                     if year not in entries:raise ValueError(f'No v2 source for {model} {var} {year}')
                     jobs.append((model,var,year,subset_url(entries[year],year,var)))
-    print(f'{len(jobs)} small point subsets; calibration 1991–2014, comparison 2015–2025, outlook 2026–2030',flush=True)
+    print(f'{len(jobs)} small point subsets; calibration 1991–2014, comparison 2015–2025, outlook 2026–'+str(END_YEAR),flush=True)
     def fetch(job):
         model,var,year,url=job;path=cache/f'{model}_{var}_{year}.nc'
         if path.exists():body=path.read_bytes()
@@ -136,7 +153,8 @@ def run(workers=4):
             except Exception as exc:
                 job=futures[future];failures.append((job[:3],str(exc)));print('FAILED',job[:3],str(exc),flush=True)
             if i%15==0:print(f'{i}/{len(jobs)} complete; {len(failures)} failures',flush=True)
-    complete=[m for m in MODELS if sum(s['model']==m for s in sources)==120]
+    rows=kept_rows+rows;sources=kept_sources+sources
+    complete=[m for m in MODELS if sum(s['model']==m for s in sources)==len(VARIABLES)*(END_YEAR-1990)]
     rows=[r for r in rows if r['model'] in complete]
     write_csv(ROOT/'data/metadata/projection_sources.csv',sorted(sources,key=lambda r:r['source_id']))
     if len(complete)<3:raise RuntimeError(f'Only {len(complete)} complete models; do not publish an ensemble. Failures: {failures[:5]}')
@@ -148,7 +166,7 @@ def run(workers=4):
         source_inventory='data/metadata/projection_sources.csv',
         source_inventory_sha256=hashlib.sha256((ROOT/'data/metadata/projection_sources.csv').read_bytes()).hexdigest(),
         acquisition_code_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),humidity_policy='Source RH bounded to 0–100 with daily clipping counts in inventory',
-        calibration='1991–2014',validation='2015–2025',outlook='2026–2030'))
+        calibration='1991–2014',validation='2015–2025',outlook=f'2026–{END_YEAR}'))
     save_manifest(manifest)
     print('Saved',len(rows),'monthly rows from',complete,flush=True)
     from backend.outlook import build_projection_cache

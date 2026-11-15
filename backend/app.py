@@ -268,6 +268,48 @@ def predict(field_id: str):
     }
 
 
+# ---------- past seasons ----------
+
+@functools.lru_cache(maxsize=1)
+def _dryness():
+    return field_profile.dryness_ranking()
+
+
+@app.get("/api/season/{field_id}")
+def past_season(field_id: str, year: int = Query(2012, ge=1981, le=2025)):
+    """Replay any past May-Sep season from cached NASA data, against the normal year."""
+    _field(field_id)
+    rec = field_profile.season_record(year)
+    normal = profiles()["normal"]
+    ranks = _dryness()
+    out_sources = {}
+    for src, label in (("power", "NASA POWER"), ("imerg", "GPM IMERG")):
+        st, ns = rec["sources"][src], normal["stress"]["sources"][src]
+        r = ranks[src]
+        out_sources[src] = None if st is None else {
+            **st, "source": label, "normal_years": ns["years"], "normal_rain_mm": ns["rain_mm"],
+            "rain_change_mm": round(st["rain_mm"] - ns["rain_mm"], 1),
+            "normal_dry_spell_days": ns["dry_spell_days"], "normal_heavy_rain_days": ns["heavy_rain_days"],
+            "dryness_rank": r["order"].index(year) + 1, "dryness_of": r["years"]}
+    nroot = normal["root_zone_july_m3m3"]
+    return {
+        "field_id": field_id, "year": year, "status": "CACHED",
+        "temp_c": rec["temp_c"], "normal_temp_c": round(normal["temp_c"], 2),
+        "temp_change_c": None if rec["temp_c"] is None else round(rec["temp_c"] - normal["temp_c"], 2),
+        "degree_days_above_10c": rec["degree_days_above_10c"],
+        "normal_degree_days_above_10c": normal["stress"]["degree_days_above_10c"],
+        "sources": out_sources,
+        "root_zone_july_m3m3": rec["root_zone_july_m3m3"], "normal_root_zone_july_m3m3": nroot,
+        "driest_years": {src: ranks[src]["order"][:8] for src in ranks},
+        "rain_by_year_mm": {src: ranks[src]["rain_mm"] for src in ranks},
+        "highlight_year": field_profile.DRY_YEAR,
+        "note": ("Measured May to September facts for one past season against the normal year (POWER 1991-2020, "
+                 "IMERG 2001-2020). IMERG starts in mid 1998 and GLDAS in 2000, so earlier years show POWER only. "
+                 "Dryness ranks are computed from the data."),
+        "method": normal["stress"]["method"],
+    }
+
+
 # ---------- plan ----------
 
 ROTATION_DISPLAY = {

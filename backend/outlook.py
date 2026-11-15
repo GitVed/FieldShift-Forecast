@@ -52,6 +52,7 @@ def build_projection_cache(root=ROOT):
         value=float(row['value'])
         if not math.isfinite(value) or row['quality_flag']!='valid':raise ValueError('Invalid projection month')
         lookup[key]=value
+    last_year=max(k[2] for k in lookup)   # projection end comes from the data (2040 since Sun Nov 15)
     observations={}
     for var,name in field_profile.FILES.items():
         source=root/'data/seed'/name
@@ -68,7 +69,7 @@ def build_projection_cache(root=ROOT):
                 for month in range(1,13):
                     mb=statistics.mean(lookup[(model,variable,y,month)] for y in range(1991,2015))
                     ob=statistics.mean(observations[variable][(y,month)] for y in range(1991,2015))
-                    for year in range(2015,2031):
+                    for year in range(2015,last_year+1):
                         original=lookup[(model,variable,year,month)]
                         value=adjust(original,mb,ob,variable)
                         aligned[(year,month)]=value
@@ -133,7 +134,8 @@ def timeline_data():
             first=read_rows(path)[0];nex=footprint(float(first['latitude']),float(first['longitude']),.25,.25,'NASA NEX-GDDP-CMIP6 v2 / SSP370')
             projection_error='Fewer than three complete climate models for this year.'
         else:projection_error='Projection cache failed its integrity check.'
-    for year in range(2021,2031):
+    last_projected=max((k[0] for k in projected),default=2030)
+    for year in range(2021,last_projected+1):
         historical=year<=2025;metrics={};model_names=[]
         if historical:
             for var,series in observations.items():
@@ -246,7 +248,7 @@ def rank_annual_options(rows,crop_sequences,selected,baseline,soil):
 
 
 @router.get('/recommendations/{field_id}')
-def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2030),
+def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
                     must_grow:Optional[str]=None,need_bu:Optional[float]=Query(None,gt=0)):
     if field_id!='harrow':raise HTTPException(404,'Unknown field')
     if need_bu is not None and not math.isfinite(need_bu):raise HTTPException(422,'Yield target must be finite')

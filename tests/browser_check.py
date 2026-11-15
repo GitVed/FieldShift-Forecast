@@ -77,6 +77,10 @@ def run(url,historical_preview=False):
         # Detect evidence, field overlays and other crops (added Sun Nov 15).
         expect(page.locator('#trend-card')).to_contain_text('per decade')
         assert page.locator('.leaflet-interactive').count()>=3,'field square, trial point and grid cell expected'
+        # Past-season replay (P1): any year 1981 to 2025, driest years from the data.
+        expect(page.locator('#season-card')).to_contain_text('2012')
+        page.locator('#season-year').select_option('1988');expect(page.locator('#season-card')).to_contain_text('May to September 1988')
+        expect(page.locator('#season-card')).to_contain_text('Not available before 1999')
         page.locator('#tab-others').click();expect(page.locator('.crop-card').first).to_be_visible()
         expect(page.locator('#panel-body')).to_contain_text('Kidney beans');expect(page.locator('#panel-body')).to_contain_text('white mould')
         before=page.locator('.crop-card').count();page.locator('#filter-grown').check()
@@ -92,10 +96,10 @@ def run(url,historical_preview=False):
         page.locator('#play-timeline').click();expect(page.locator('#play-timeline')).to_have_attribute('aria-pressed','false')
         page.locator('.leaflet-control-zoom-in').click();page.locator('.leaflet-control-zoom-out').click()
         # Cursor, native range thumb and year labels share one axis.
-        for year in [2021,2025,2030]:
+        for year in [2021,2025,2030,int(page.locator('#year-range').get_attribute('max'))]:
             page.locator(f'[data-year="{year}"]').click()
             page.wait_for_function("""(year)=>{const c=document.querySelector('#timeline-cursor').getBoundingClientRect();const y=document.querySelector(`[data-year="${year}"]`).getBoundingClientRect();return Math.abs(c.x+c.width/2-y.x-y.width/2)<2;}""",arg=year)
-            alignment=page.evaluate("""(year)=>{const r=document.querySelector('#year-range').getBoundingClientRect();const y=document.querySelector(`[data-year="${year}"]`).getBoundingClientRect();return Math.abs(r.x+8.5+(year-2021)/9*(r.width-17)-y.x-y.width/2);} """,year)
+            alignment=page.evaluate("""(year)=>{const r=document.querySelector('#year-range').getBoundingClientRect();const y=document.querySelector(`[data-year="${year}"]`).getBoundingClientRect();const lo=+document.querySelector('#year-range').min,hi=+document.querySelector('#year-range').max;return Math.abs(r.x+8.5+(year-lo)/(hi-lo)*(r.width-17)-y.x-y.width/2);} """,year)
             assert alignment<2,(year,alignment)
         # A failed recommendation request must expose a functional retry.
         page.route('**/api/recommendations/**',lambda route:route.fulfill(status=503,content_type='application/json',body=json.dumps({'detail':'Temporary test outage'})))

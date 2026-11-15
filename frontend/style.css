@@ -23,7 +23,7 @@
 .scrubber-row input[type=range] { display:block; width:calc(90% + 17px); margin:0 calc(5% - 8.5px); }
 .step-button { position:absolute; top:0; left:-12px; }
 #next-year { left:auto; right:-12px; }
-.year-ticks { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); margin:0; gap:0; }
+.year-ticks { display:grid; grid-template-columns:repeat(var(--years,10),minmax(0,1fr)); margin:0; gap:0; }
 .year-tick { width:100%; min-width:0; text-align:center; }
 .timeline-cursor { position:absolute; top:0; bottom:0; width:1px; background:#426a4266; transition:left 720ms cubic-bezier(.2,.7,.2,1); pointer-events:none; }
 .timeline-cursor i { position:absolute; top:50%; left:0; width:7px; height:7px; border:2px solid white; background:#426a42; border-radius:50%; transform:translate(-50%,-50%); box-shadow:0 0 0 1px #426a4280; transition:top 720ms cubic-bezier(.2,.7,.2,1); }
@@ -100,3 +100,12 @@ input[type=range]::-moz-range-thumb { box-sizing:border-box; width:17px; height:
 .crop-card dt{color:#7b8e74}.crop-card dd{margin:0;color:#2c4532}
 .crop-advice{font-size:11px;background:#fbf8ee;border-radius:8px;padding:8px;margin:8px 0 4px;color:#6a5524}
 .crop-collapsed{margin-top:12px}
+.season-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.season-head select{font:inherit;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:white;max-width:100%}
+.season-facts{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:5px;font-size:12px}
+.season-facts li{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #eef2ea;padding-bottom:4px}
+.season-facts li span{color:#7b8e74}.season-facts li strong{font:500 12px 'DM Sans',sans-serif;text-align:right;color:#26402e;margin:0}
+@media(max-width:600px){.season-facts li{flex-direction:column;gap:2px}.season-facts li strong{text-align:left}}
+.year-tick.unlabelled{color:#b7c2ae}
+#year-ticks.year-ticks{display:block;position:relative;height:24px;margin:0}
+#year-ticks .year-tick{position:absolute;top:0;transform:translateX(-50%);width:auto;min-width:16px;padding:6px 2px}

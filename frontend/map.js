@@ -13,6 +13,13 @@ const layers = {
 };
 const fmt=(value,places=1)=>value===null||value===undefined?'—':Number(value).toLocaleString('en-CA',{minimumFractionDigits:places,maximumFractionDigits:places});
 const selected=()=>state.timeline?.years.find(r=>r.year===state.year);
+const FIRST_YEAR=2021,LAST_OBSERVED=2025;
+const lastYear=()=>state.timeline?.years.at(-1)?.year||2030;
+const yearCount=()=>lastYear()-FIRST_YEAR+1;
+// Horizontal position of a year inside the tick row, matched to the native range thumb (8.5 px half-thumb).
+function axisX(year){const r=$('year-range').getBoundingClientRect(),t=$('year-ticks').getBoundingClientRect(),span=Math.max(1,lastYear()-FIRST_YEAR);
+ return (r.x-t.x)+8.5+(year-FIRST_YEAR)/span*(r.width-17);}
+function layoutAxis(){document.querySelectorAll('#year-ticks .year-tick').forEach(b=>{b.style.left=axisX(+b.dataset.year)+'px';});}
 function getMetric(year=selected(),layer=state.layer){
  if(layer==='soil')return {value:state.timeline?.soil.ph?.value,low:null,high:null,kind:'regional_estimate',source:'ISRIC SoilGrids 250 m at the field',window:'Static soil profile · 0–30 cm'};
  return year?.metrics[layer]||{value:null,kind:'unavailable'};
@@ -98,6 +105,22 @@ function renderTrend(){const box=$('trend-card'),d=state.detect;if(!box||!d){if(
  const up=t&&t.verdict==='increasing',confirmed=/Temperature supported/.test(d.buddy_check||'');
  box.hidden=false;
  box.innerHTML=`<div><span class="eyebrow">MEASURED SINCE 1981 · NASA POWER</span><strong>${up?`Temperature up ${fmt(t.value,2)} °C per decade`:'No clear temperature trend'}</strong><p>${up&&confirmed?'Confirmed by the grid cell 0.5° north and by starting the test in 1991. ':''}Rain and July soil moisture show no clear trend.</p></div><details><summary>How we know</summary><div class="detail-copy"><p>Temperature p-value ${esc(t?.p_value)} · rain p-value ${esc(r?.p_value)} · July soil moisture p-value ${esc(m?.p_value)}.</p><p>${esc(d.source)}</p><p>${esc(m?.source||'')}</p><p>${esc(d.note)}</p>${d.data_quality?`<p>Data quality · ${esc(d.data_quality.text)}</p>`:''}</div></details>`;}
+function seasonOptions(d){const driest=d.driest_years.power,all=Array.from({length:45},(_,i)=>2025-i);
+ const label=y=>`${y}${y===d.highlight_year?' · 2012 dry year':''} · ${fmt(d.rain_by_year_mm.power[y],0)} mm`;
+ return `<optgroup label="Driest May to September in NASA POWER">${driest.map(y=>`<option value="${y}" ${y===d.year?'selected':''}>${label(y)}</option>`).join('')}</optgroup><optgroup label="Every year, 1981 to 2025">${all.map(y=>`<option value="${y}" ${y===d.year&&!driest.includes(y)?'selected':''}>${label(y)}</option>`).join('')}</optgroup>`;}
+function renderSeason(){const box=$('season-card'),d=state.season;if(!box||!d){if(box)box.hidden=true;return;}
+ box.hidden=false;const p=d.sources.power,i=d.sources.imerg,r=d.root_zone_july_m3m3,nr=d.normal_root_zone_july_m3m3;
+ const sign=v=>v==null?'':(v>=0?'+':'')+fmt(v,0);
+ box.innerHTML=`<div class="season-head"><div><span class="eyebrow">REPLAY A PAST SEASON · MEASURED, NOT MODELLED</span><strong>May to September ${d.year}${d.year===d.highlight_year?' · the 2012 dry year':''}</strong></div><label class="sr-only" for="season-year">Past year</label><select id="season-year">${seasonOptions(d)}</select></div>
+ <ul class="season-facts"><li><span>Rain, NASA POWER</span><strong>${fmt(p.rain_mm,0)} mm · ${sign(p.rain_change_mm)} mm vs normal · driest rank ${p.dryness_rank} of ${p.dryness_of}</strong></li>
+ <li><span>Rain, GPM IMERG</span><strong>${i?`${fmt(i.rain_mm,0)} mm · ${sign(i.rain_change_mm)} mm vs normal · driest rank ${i.dryness_rank} of ${i.dryness_of}`:'Not available before 1999'}</strong></li>
+ <li><span>Temperature</span><strong>${fmt(d.temp_c,1)} °C · ${d.temp_change_c>=0?'+':''}${fmt(d.temp_change_c,2)} °C vs normal</strong></li>
+ <li><span>Degree days above 10 °C</span><strong>${fmt(d.degree_days_above_10c,0)} vs ${fmt(d.normal_degree_days_above_10c,0)} normal</strong></li>
+ <li><span>Longest dry spell</span><strong>${fmt(p.dry_spell_days,0)} days vs ${fmt(p.normal_dry_spell_days,0)} normal (POWER)</strong></li>
+ <li><span>July soil moisture, 40 to 100 cm</span><strong>${r?`${fmt(r['40-100 cm'],3)} vs ${fmt(nr['40-100 cm'],3)} m³/m³ (GLDAS)`:'Not available before 2000'}</strong></li></ul>
+ <details><summary>How we know</summary><div class="detail-copy"><p>${esc(d.note)}</p><p>${esc(d.method)}</p></div></details>`;
+ $('season-year').onchange=e=>loadSeason(Number(e.target.value));}
+async function loadSeason(year){try{state.season=await jsonGet(`/api/season/harrow?year=${year}`);}catch(e){state.season=null;}renderSeason();}
 function updateMetrics(){
  const year=selected();
  $('metric-strip').innerHTML=['temperature','precipitation',year.kind==='projection'?'humidity':'soil_moisture'].map(key=>{
@@ -112,30 +135,31 @@ function updateMetrics(){
 function updateChart(){
  const chart=$('timeline-chart');
  if(!chart.querySelector('#timeline-cursor'))chart.innerHTML='<svg viewBox="0 0 600 45" preserveAspectRatio="none"></svg><span id="timeline-cursor" class="timeline-cursor"><i></i></span>';
- const plot=chart.querySelector('svg'),cursor=$('timeline-cursor');cursor.style.left=((state.year-2021+.5)/10*100)+'%';
+ const plot=chart.querySelector('svg'),cursor=$('timeline-cursor');layoutAxis();cursor.style.left=axisX(state.year)+'px';
  if(state.layer==='soil'){plot.innerHTML='<path d="M0 25H600" stroke="#a5ba91" stroke-dasharray="4 5"/><text x="300" y="18" text-anchor="middle" fill="#93a080" stroke="none" font-family="DM Sans" font-size="9">Static soil reference · unchanged across years</text>';cursor.querySelector('i').style.top='55%';return;}
- const [min,max]=rangeFor(state.layer),x=i=>(i+.5)/10*600,y=v=>42-(v-min)/(max-min)*36;
+ const [min,max]=rangeFor(state.layer),x=i=>axisX(FIRST_YEAR+i)/Math.max(1,chart.getBoundingClientRect().width)*600,y=v=>42-(v-min)/(max-min)*36;
  const series=state.timeline.years.map(r=>r.metrics[state.layer]);
  function path(indices,key){return indices.map((i,j)=>`${j?'L':'M'}${x(i).toFixed(2)},${y(series[i][key]).toFixed(2)}`).join(' ');}
- const historical=[0,1,2,3,4].filter(i=>series[i].value!==null),projected=[5,6,7,8,9].filter(i=>series[i].value!==null);
+ const historical=series.map((m,i)=>i).filter(i=>FIRST_YEAR+i<=LAST_OBSERVED&&series[i].value!==null),projected=series.map((m,i)=>i).filter(i=>FIRST_YEAR+i>LAST_OBSERVED&&series[i].value!==null);
  const band=projected.length?path(projected,'low')+' '+projected.slice().reverse().map(i=>`L${x(i)},${y(series[i].high)}`).join(' ')+'Z':'';
- cursor.querySelector('i').style.top=(series[state.year-2021].value===null?50:y(series[state.year-2021].value)/45*100)+'%';
- plot.innerHTML=`<path d="M300 0V45" stroke="#d4dec9" stroke-dasharray="3 4"/>${band?`<path d="${band}" fill="#e4ebd7" stroke="none"/>`:''}<path d="${path(historical,'value')}" stroke="#7b9d65" fill="none"/>${projected.length?`<path d="${path(projected,'value')}" stroke="#a9a36e" stroke-dasharray="4 4" fill="none"/>`:''}${series.map((m,i)=>m.value===null?'':`<circle cx="${x(i)}" cy="${y(m.value)}" r="${state.year===2021+i?3.5:2}" fill="${state.year===2021+i?'#315b39':'#a7bc91'}" stroke="white"/>`).join('')}`;
+ cursor.querySelector('i').style.top=(series[state.year-FIRST_YEAR].value===null?50:y(series[state.year-FIRST_YEAR].value)/45*100)+'%';
+ const divider=((axisX(LAST_OBSERVED)+axisX(LAST_OBSERVED+1))/2/Math.max(1,chart.getBoundingClientRect().width)*600).toFixed(1);
+ plot.innerHTML=`<path d="M${divider} 0V45" stroke="#d4dec9" stroke-dasharray="3 4"/>${band?`<path d="${band}" fill="#e4ebd7" stroke="none"/>`:''}<path d="${path(historical,'value')}" stroke="#7b9d65" fill="none"/>${projected.length?`<path d="${path(projected,'value')}" stroke="#a9a36e" stroke-dasharray="4 4" fill="none"/>`:''}${series.map((m,i)=>m.value===null?'':`<circle cx="${x(i)}" cy="${y(m.value)}" r="${state.year===FIRST_YEAR+i?3.5:2}" fill="${state.year===FIRST_YEAR+i?'#315b39':'#a7bc91'}" stroke="white"/>`).join('')}`;
 }
 function setYear(year,{stop=true}={}){
- state.year=Math.max(2021,Math.min(2030,Number(year)));if(stop)pause();
+ state.year=Math.max(FIRST_YEAR,Math.min(lastYear(),Number(year)));if(stop)pause();
  state.request++;state.controller?.abort();$('print-plan').disabled=true;markUpdating();
  $('year-range').value=state.year;$('year-range').setAttribute('aria-valuetext',`${state.year}, ${state.year<=2025?'observed history':'climate projection'}`);
  document.querySelectorAll('.year-tick').forEach(b=>{b.classList.toggle('active',+b.dataset.year===state.year);b.setAttribute('aria-pressed',String(+b.dataset.year===state.year));});
- $('previous-year').disabled=state.year===2021;$('next-year').disabled=state.year===2030;
+ $('previous-year').disabled=state.year===FIRST_YEAR;$('next-year').disabled=state.year===lastYear();
  updateMap();updateMetrics();updateChart();clearTimeout(state.pending);state.pending=setTimeout(loadRecommendations,180);
 }
 function pause(){if(state.timer)clearInterval(state.timer);state.timer=null;$('play-icon').textContent='▶';$('play-label').textContent='Play';$('play-timeline').setAttribute('aria-pressed','false');$('play-timeline').setAttribute('aria-label','Play timeline');}
 function play(){
  if(state.timer){pause();return;}
- if(state.year===2030)setYear(2021,{stop:false});
+ if(state.year===lastYear())setYear(FIRST_YEAR,{stop:false});
  $('play-icon').textContent='Ⅱ';$('play-label').textContent='Pause';$('play-timeline').setAttribute('aria-pressed','true');$('play-timeline').setAttribute('aria-label','Pause timeline');
- state.timer=setInterval(()=>{if(state.year===2030){pause();return;}setYear(state.year+1,{stop:false});},1800);
+ state.timer=setInterval(()=>{if(state.year===lastYear()){pause();return;}setYear(state.year+1,{stop:false});},1800);
 }
 function cropVisual(name){const n=name.toLowerCase();return n.includes('corn')||n==='maize'?['corn','Corn','corn']:n.includes('soy')?['soy','Soybean','soybean']:['wheat','Wheat','wheat'];}
 function sourceAnchors(text){return [...new Set((text||'').match(/https?:\/\/[^\s)]+/g)||[])].map((url,i)=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Source ${i+1} ↗</a>`).join(' · ');}
@@ -235,17 +259,21 @@ function setMode(mode){
 function setCrop(crop){state.crop=crop;$('priority-error').hidden=true;document.querySelectorAll('[data-crop]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.crop===crop)));state.target=null;loadRecommendations();}
 function openSources(){
  pause();const year=selected(),projection=state.timeline.projection;
- $('sources-content').innerHTML=`<section class="source-section"><h3>What you’re seeing</h3><p>${state.year<=2025?'2021–2025 uses observed regional POWER and GLDAS data.':'2026–2030 uses NASA climate-model scenarios under SSP370, not weather forecasts.'} Current view ${state.year}. ${year?.model_count||0} projection models.</p><p>Temperature, rain and humidity use May–September. Soil moisture is July, 0–10 cm. Winter wheat uses a different growing season.</p></section><section class="source-section"><h3>How to read future values</h3><p>Median and full spread across ${projection.models.length} climate models, aligned to POWER’s 1991–2014 monthly climatology. A 2015–2025 climatology comparison is recorded with the data. The spread is not a confidence interval, and an individual year is not a weather prediction.</p><p>Observed long-term temperature trend ${fmt(state.timeline.trend?.slope_per_decade,2)} °C per decade, with the north-cell and 1991-start checks recorded in the trend dataset.</p><p>Future soil moisture is not modeled. Soil pH and texture are SoilGrids 250 m model values at the field, not a lab test. No surveyed field boundary or field-level temperature hotspots are available.</p></section><section class="source-section"><h3>What a recommendation means</h3><p>${esc(state.recommendations?.ranking||'Historical trial index and sourced drought-resilience evidence; annual climate updates the water check, not the trial yields.')}</p><p>Trial results refer to Woodslee, about 26 km from the SAMPLE field. The trial index is not accuracy, suitability probability or an annual yield forecast. GAEZ suitability represents a multi-year climate period. Water checks omit irrigation and soil storage.</p><p>${esc(state.recommendations?.method||'')}</p></section><section class="source-section"><h3>Go to the source</h3><ul>${state.timeline.sources.map(s=>`<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)} ↗</a></li>`).join('')}<li><a href="/docs" target="_blank" rel="noopener noreferrer">API documentation ↗</a></li></ul></section>`;
+ $('sources-content').innerHTML=`<section class="source-section"><h3>What you’re seeing</h3><p>${state.year<=2025?'2021–2025 uses observed regional POWER and GLDAS data.':`2026–${lastYear()} uses NASA climate-model scenarios under SSP370, not weather forecasts.`} Current view ${state.year}. ${year?.model_count||0} projection models.</p><p>Temperature, rain and humidity use May–September. Soil moisture is July, 0–10 cm. Winter wheat uses a different growing season.</p></section><section class="source-section"><h3>How to read future values</h3><p>Median and full spread across ${projection.models.length} climate models, aligned to POWER’s 1991–2014 monthly climatology. A 2015–2025 climatology comparison is recorded with the data. The spread is not a confidence interval, and an individual year is not a weather prediction.</p><p>Observed long-term temperature trend ${fmt(state.timeline.trend?.slope_per_decade,2)} °C per decade, with the north-cell and 1991-start checks recorded in the trend dataset.</p><p>Future soil moisture is not modeled. Soil pH and texture are SoilGrids 250 m model values at the field, not a lab test. No surveyed field boundary or field-level temperature hotspots are available.</p></section><section class="source-section"><h3>What a recommendation means</h3><p>${esc(state.recommendations?.ranking||'Historical trial index and sourced drought-resilience evidence; annual climate updates the water check, not the trial yields.')}</p><p>Trial results refer to Woodslee, about 26 km from the SAMPLE field. The trial index is not accuracy, suitability probability or an annual yield forecast. GAEZ suitability represents a multi-year climate period. Water checks omit irrigation and soil storage.</p><p>${esc(state.recommendations?.method||'')}</p></section><section class="source-section"><h3>Go to the source</h3><ul>${state.timeline.sources.map(s=>`<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)} ↗</a></li>`).join('')}<li><a href="/docs" target="_blank" rel="noopener noreferrer">API documentation ↗</a></li></ul></section>`;
  $('sources-dialog').showModal();
 }
+function buildYearTicks(){const n=yearCount(),labelled=y=>y===FIRST_YEAR||y===lastYear()||y%5===0;
+ $('year-range').min=FIRST_YEAR;$('year-range').max=lastYear();$('year-ticks').style.setProperty('--years',n);
+ $('year-ticks').innerHTML=Array.from({length:n},(_,i)=>FIRST_YEAR+i).map(y=>`<button class="year-tick ${y===state.year?'active':''} ${labelled(y)?'':'unlabelled'}" data-year="${y}" aria-label="Show ${y}">${labelled(y)?y:'<span aria-hidden="true">·</span>'}</button>`).join('');
+ document.querySelectorAll('[data-year]').forEach(b=>b.onclick=()=>setYear(b.dataset.year));
+ layoutAxis();window.addEventListener('resize',()=>{layoutAxis();updateChart();});
+ const head=document.querySelector('.timeline-heading h3');if(head)head.textContent=`Five years back. ${lastYear()-LAST_OBSERVED} years ahead.`;}
 function connectControls(){
  document.querySelectorAll('[data-layer]').forEach(b=>b.addEventListener('click',()=>{
   state.layer=b.dataset.layer;document.querySelectorAll('[data-layer]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});updateMap();updateChart();
  }));
  $('year-range').addEventListener('input',e=>setYear(e.target.value));
  $('previous-year').onclick=()=>setYear(state.year-1);$('next-year').onclick=()=>setYear(state.year+1);$('play-timeline').onclick=play;
- $('year-ticks').innerHTML=Array.from({length:10},(_,i)=>`<button class="year-tick ${2021+i===state.year?'active':''}" data-year="${2021+i}" aria-label="Show ${2021+i}">${2021+i}</button>`).join('');
- document.querySelectorAll('[data-year]').forEach(b=>b.onclick=()=>setYear(b.dataset.year));
  $('view-history').onclick=()=>setYear(2025);
  $('previous-option').onclick=()=>showOption(state.optionIndex-1,-1);$('next-option').onclick=()=>showOption(state.optionIndex+1,1);
  $('option-nav').addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();showOption(state.optionIndex+(event.key==='ArrowRight'?1:-1));}});
@@ -274,7 +302,9 @@ async function load(){
   const [timeline,pilot]=await Promise.all([jsonGet('/api/timeline/harrow'),jsonGet('/api/pilot')]);
   state.timeline=timeline;state.pilot=pilot;
   try{state.detect=await jsonGet('/api/detect/harrow');}catch(e){state.detect=null;}renderTrend();
+  loadSeason(2012);
   try{state.crops=await jsonGet('/api/crops/harrow');}catch(e){state.crops=null;}
+  buildYearTicks();
   if(!state.map)initMap();dataControls(true);setYear(state.year);
  }catch(error){setError('The cached field data couldn’t be loaded. '+error.message);$('data-badge').textContent='Data unavailable';$('panel-body').innerHTML='<div class="empty-state"><strong>Your data stays honest.</strong>Reconnect to the local API and try again. No sample predictions are being substituted.</div>';}
 }

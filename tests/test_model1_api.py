@@ -258,6 +258,16 @@ class ApiTests(unittest.TestCase):
             self.assertIn("suitability only", c["label"])
             self.assertNotIn("yield_bu_ac", c)
 
+    def test_past_season_replay(self):
+        j = self.c.get("/api/season/harrow?year=2012").json()
+        self.assertEqual(j["sources"]["power"]["rain_mm"], 317.9)
+        self.assertLess(j["sources"]["imerg"]["rain_change_mm"], 0)          # IMERG also drier than normal
+        self.assertEqual(j["driest_years"]["power"][:2], [1988, 2012])      # computed from the data
+        old = self.c.get("/api/season/harrow?year=1985").json()
+        self.assertIsNone(old["sources"]["imerg"])                          # IMERG starts 1998, never filled
+        self.assertIsNone(old["root_zone_july_m3m3"])                       # GLDAS starts 2000
+        self.assertEqual(self.c.get("/api/season/harrow?year=1980").status_code, 422)
+
     def test_bad_inputs(self):
         self.assertEqual(self.c.get("/api/rotation/nope").status_code, 404)
         self.assertEqual(self.c.get("/api/rotation/harrow?scenario=wet").status_code, 422)

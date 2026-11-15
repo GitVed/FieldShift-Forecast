@@ -62,7 +62,8 @@ class OutlookTests(unittest.TestCase):
     def setUpClass(cls):cls.client=TestClient(app)
     def test_ten_year_timeline_and_distinct_kinds(self):
         data=self.client.get('/api/timeline/harrow').json()
-        self.assertEqual([r['year'] for r in data['years']],list(range(2021,2031)))
+        # Extended to 2040 on Sun Nov 15 to match the GAEZ 2021-2040 period.
+        self.assertEqual([r['year'] for r in data['years']],list(range(2021,2041)))
         self.assertTrue(all(r['kind']=='observed' for r in data['years'][:5]))
         self.assertTrue(all(r['kind']=='projection' for r in data['years'][5:]))
         # Field moved onto cropland (Sun Nov 15); SoilGrids at the field, 0-30 cm, gives 6.6.
@@ -80,7 +81,7 @@ class OutlookTests(unittest.TestCase):
             self.assertIsNone(row['metrics']['soil_moisture']['value'])
     def test_unknown_field_and_invalid_parameters(self):
         self.assertEqual(self.client.get('/api/timeline/other').status_code,404)
-        for query in ['year=2035','year=2020','must_grow=rice','need_bu=10','must_grow=maize&need_bu=-1','must_grow=maize&need_bu=nan']:
+        for query in ['year=2045','year=2020','must_grow=rice','need_bu=10','must_grow=maize&need_bu=-1','must_grow=maize&need_bu=nan']:
             self.assertEqual(self.client.get('/api/recommendations/harrow?'+query).status_code,422,query)
     def test_priority_target_and_historical_evidence_preserved(self):
         response=self.client.get('/api/recommendations/harrow?year=2025&must_grow=maize&need_bu=150')

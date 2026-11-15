@@ -399,6 +399,39 @@ def july_soil_moisture_trend(depth=("0", "10")):
             "source_id": "gldas_noah025", "label": "CACHED"}
 
 
+PAST_YEARS = range(1981, 2026)
+
+
+def season_record(year):
+    """Measured May-Sep facts for one past year. Sources missing for that year
+    (IMERG before 1999, GLDAS before 2000) come back as None, never filled."""
+    T = monthly("temperature")
+    out = {"year": year, "temp_c": None, "sources": {}, "degree_days_above_10c": None, "root_zone_july_m3m3": None}
+    try:
+        out["temp_c"] = round(_season(T, year, SEASON_MONTHS, "mean"), 2)
+    except ValueError:
+        pass
+    for src, name in (("power", "power_rain"), ("imerg", "imerg_rain")):
+        st = season_stats(daily(name), year)
+        out["sources"][src] = None if st is None else {k: round(v, 1) for k, v in st.items()}
+    dd = degree_days(year)
+    out["degree_days_above_10c"] = None if dd is None else round(dd, 1)
+    if year >= 2000:
+        out["root_zone_july_m3m3"] = gldas_july_layers([year])
+    return out
+
+
+def dryness_ranking():
+    """Every past year ranked by May-Sep rain, driest first, per source. Computed
+    from the cached daily data, not chosen by hand."""
+    ranks = {}
+    for src, name in (("power", "power_rain"), ("imerg", "imerg_rain")):
+        totals = {y: st["rain_mm"] for y in PAST_YEARS if (st := season_stats(daily(name), y)) is not None}
+        order = sorted(totals, key=totals.get)
+        ranks[src] = {"years": len(order), "order": order, "rain_mm": {y: round(totals[y], 1) for y in order}}
+    return ranks
+
+
 def dry_year_check():
     """May-Sep rain for the two years README calls dry, against the baseline."""
     P = monthly("precipitation")

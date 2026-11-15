@@ -8,7 +8,7 @@ Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we wo
 
 ## Status, Sat evening
 
-Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 93 tests pass. It is not on main yet.
+Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 94 tests pass. It is not on main yet.
 
 Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/frontend/?api=1
 
@@ -53,6 +53,11 @@ Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:a
 - "Will this rotation meet my target?" on every option, with both trial figures and the per-year average
 - Other crops tab with Ontario and GAEZ filters; perennials and crops not grown here collapsed
 - 93 tests and Dev's browser check pass (offline tiles, mobile, print)
+
+**Done Sun (P1)**
+- NASA NEX-GDDP-CMIP6 projections extended to 2040 (5 models, SSP370). 150 new point requests; the 2015-2030 values are unchanged. The 2035 view is now a real 5-model range
+- Past-season replay, any year 1981 to 2025, from cached POWER, IMERG and GLDAS. Driest years are computed from the data (POWER: 1988, then 2012). 2012 is highlighted
+- New route `/api/season/harrow?year=2012`. 94 tests and the browser check pass
 
 **Still UNVERIFIED or not available (owner: you)**
 1. Corn yield period: the Top Crop Manager article gives no period for the 2001-trial corn figures
