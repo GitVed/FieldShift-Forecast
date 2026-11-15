@@ -101,6 +101,9 @@ This replaces the OMAFRA range fallback in 3b. Vedant's evidence audit (docs/EVI
 - Rain uses two NASA sources, POWER and IMERG, shown as a range. 2012 was 55 to 108 mm drier than normal and much hotter, but dry spells were not longer
 - Long-term trial averages (Agomoh et al. 2020, 2021) are shown beside the 5-year trial figures and never averaged with them. Essex 2025 winter wheat is a regional line only
 - Bowles et al. 2020 drought result is from US sites only. Say so
+- Climate yield adjustment (P2, Sun Nov 15). Essex County yields 1981-2025 (OMAFA) were detrended and fitted on NASA POWER window rain and degree days above 10 C, then tested on years the model had not seen. Corn (May-Sep) beats no change, skill 0.156 leaving one year out and 0.135 leaving 5-year blocks out (error 14.5 against 15.7 percent). Soybean (-0.044) and winter wheat (-0.075 to -0.034) do not, so their adjustment stays 1
+- The corn model missed 2012: it predicted -13.7 percent for Essex corn, the real crop was +2.7 percent above trend. This is shown on screen
+- Corn trial yields in projected years get a DERIVED range across the 5 NASA climate models, for example 145 to 173 bu/ac for corn in the clover rotation in 2028
 
 ## 4. Decision locked, Avenue 1 Harrow is main
 

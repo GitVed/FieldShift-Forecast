@@ -81,6 +81,9 @@ def run(url,historical_preview=False):
         expect(page.locator('#season-card')).to_contain_text('2012')
         page.locator('#season-year').select_option('1988');expect(page.locator('#season-card')).to_contain_text('May to September 1988')
         expect(page.locator('#season-card')).to_contain_text('Not available before 1999')
+        # P2: climate yield check shows the 2012 miss and the DERIVED 2028 example on screen.
+        expect(page.locator('#yield-model-card')).to_contain_text('13.7');expect(page.locator('#yield-model-card')).to_contain_text('2.7')
+        expect(page.locator('#yield-model-card')).to_contain_text('145 to 173 bu/ac');expect(page.locator('#yield-model-card')).to_contain_text('DERIVED')
         page.locator('#tab-others').click();expect(page.locator('.crop-card').first).to_be_visible()
         expect(page.locator('#panel-body')).to_contain_text('Kidney beans');expect(page.locator('#panel-body')).to_contain_text('white mould')
         before=page.locator('.crop-card').count();page.locator('#filter-grown').check()

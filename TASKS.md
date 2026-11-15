@@ -8,7 +8,7 @@ Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we wo
 
 ## Status, Sat evening
 
-Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 94 tests pass. It is not on main yet.
+Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 95 tests pass. It is not on main yet.
 
 Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/frontend/?api=1
 
@@ -58,6 +58,12 @@ Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:a
 - NASA NEX-GDDP-CMIP6 projections extended to 2040 (5 models, SSP370). 150 new point requests; the 2015-2030 values are unchanged. The 2035 view is now a real 5-model range
 - Past-season replay, any year 1981 to 2025, from cached POWER, IMERG and GLDAS. Driest years are computed from the data (POWER: 1988, then 2012). 2012 is highlighted
 - New route `/api/season/harrow?year=2012`. 94 tests and the browser check pass
+
+**Done Sun (P2)**
+- Climate yield adjustment (P2, Sun Nov 15). Essex County yields 1981-2025 (OMAFA) were detrended and fitted on NASA POWER window rain and degree days above 10 C, then tested on years the model had not seen. Corn (May-Sep) beats no change, skill 0.156 leaving one year out and 0.135 leaving 5-year blocks out (error 14.5 against 15.7 percent). Soybean (-0.044) and winter wheat (-0.075 to -0.034) do not, so their adjustment stays 1
+- The corn model missed 2012: it predicted -13.7 percent for Essex corn, the real crop was +2.7 percent above trend. This is shown on screen
+- Corn trial yields in projected years get a DERIVED range across the 5 NASA climate models, for example 145 to 173 bu/ac for corn in the clover rotation in 2028
+- New route `/api/climate-yield/harrow`. Data in `data/seed/essex_yields.csv`, code in `backend/climate_yield.py`. 95 tests and the browser check pass
 
 **Still UNVERIFIED or not available (owner: you)**
 1. Corn yield period: the Top Crop Manager article gives no period for the 2001-trial corn figures

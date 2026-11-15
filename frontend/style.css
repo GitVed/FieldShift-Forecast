@@ -109,3 +109,6 @@ input[type=range]::-moz-range-thumb { box-sizing:border-box; width:17px; height:
 .year-tick.unlabelled{color:#b7c2ae}
 #year-ticks.year-ticks{display:block;position:relative;height:24px;margin:0}
 #year-ticks .year-tick{position:absolute;top:0;transform:translateX(-50%);width:auto;min-width:16px;padding:6px 2px}
+.climate-note{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0;background:#f7faf3}
+.climate-note.mixed{border-color:#d9c48a;background:#fbf8ee}.climate-note.miss{border-color:#e0aa9b;background:#fcf3ef}
+.climate-note strong{display:block;font-size:14px;margin:4px 0;color:#1d3a2a}.climate-note small{font-size:10px;color:#7b8e74}

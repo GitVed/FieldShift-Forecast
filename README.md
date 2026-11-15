@@ -312,7 +312,7 @@ FieldShift Forecast
 │   ├── trend.py, seed.py, db.py, data_api.py   # Dev's trend engine and cache
 │   └── data_pipeline.py      # Dev's data processing
 ├── frontend/                 # index.html, map.js, style.css, sample_data.json
-├── tests/                    # 93 tests
+├── tests/                    # 95 tests
 ├── docs/                     # EVIDENCE.md, MODEL2.md
 ├── Dockerfile, docker-compose.yml   # Optional
 └── requirements.txt
@@ -468,6 +468,8 @@ python -m uvicorn backend.app:app --port 8765
 Use any free port. On some machines port 8000 is already taken.
 
 The app opens at http://localhost:8765/ (Dev's frontend). Screens: Outlook (climate, trend card, map), Rotations (ordered by trial evidence), My crop (target check) and Other crops (suitability only). New API routes from Dev: `/api/timeline/harrow` and `/api/recommendations/harrow?year=2026&must_grow=soybean&need_bu=60`. Recommendations put trial evidence first; the year changes the rain-fit check, not the order. Browser check: `python tests/browser_check.py --url http://127.0.0.1:8765/`.
+
+Climate yield check (DERIVED). Essex County yields 1981-2025 were fitted against NASA POWER rain and heat and tested on years the model had not seen. Only corn beats assuming no change (skill 0.156 and 0.135, modest), so only corn gets a climate-adjusted range in projected years, across 5 NASA NEX-GDDP-CMIP6 models to 2040. Soybean and wheat keep an adjustment of 1. The model missed 2012 (predicted -13.7 percent for Essex corn, real +2.7 percent), and the screen says so. Route `/api/climate-yield/harrow`. Past seasons 1981 to 2025: `/api/season/harrow?year=2012`.
 
 ### Tests
 

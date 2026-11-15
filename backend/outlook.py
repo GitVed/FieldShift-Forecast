@@ -276,6 +276,13 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
         row['water']['ensemble_low_pct']=round(min(x[0] for x in limits),1) if limits else None
         row['water']['ensemble_high_pct']=round(max(x[1] for x in limits),1) if limits else None
         row['year']=year
+        row['climate_adjustment']=None
+        if year>2025:
+            from backend import climate_yield
+            for y in row['yields']:
+                if y['crop']=='Corn' and y.get('evidence')=='trial' and y.get('bu_ac') is not None:
+                    adj=climate_yield.adjust('corn',year,y['bu_ac'])
+                    if adj:row['climate_adjustment']={'crop':'corn','year':year,'trial_bu_ac':y['bu_ac'],**adj}
         row['gaez_period']='2001–2020 historical climate' if year<=2025 else '2021–2040 SSP370 climate'
         row['reference_reason']=row['reason']
         row['reason']=f"Historical trial index {row['score']}; ranking also considers published drought-resilience evidence. {year} rain coverage is a separate check. Trial yields are historical references, not projected yields."

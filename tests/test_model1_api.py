@@ -268,6 +268,22 @@ class ApiTests(unittest.TestCase):
         self.assertIsNone(old["root_zone_july_m3m3"])                       # GLDAS starts 2000
         self.assertEqual(self.c.get("/api/season/harrow?year=1980").status_code, 422)
 
+    def test_climate_yield_check_p2(self):
+        j = self.c.get("/api/climate-yield/harrow").json()
+        corn, soy, wheat = j["crops"]["corn"], j["crops"]["soybean"], j["crops"]["wheat"]
+        self.assertTrue(corn["beats_no_change"])
+        self.assertGreater(corn["skill_leave_one_year_out"], 0); self.assertGreater(corn["skill_5_year_blocks"], 0)
+        self.assertFalse(soy["beats_no_change"]); self.assertFalse(wheat["beats_no_change"])   # adjustment stays 1
+        self.assertEqual(corn["held_out_2012"], {"predicted_pct": -13.7, "actual_pct": 2.7})   # the 2012 miss
+        self.assertEqual((round(j["example"]["low_bu_ac"]), round(j["example"]["high_bu_ac"])), (145, 173))
+        self.assertNotIn("soybean", j["projection_ranges_pct"])                                   # never applied
+        rec = self.c.get("/api/recommendations/harrow?year=2028").json()
+        clover = next(r for r in rec["rotations"] if r["id"] == "corn-soy-wheat-clover")
+        self.assertEqual(clover["climate_adjustment"]["status"], "DERIVED")
+        self.assertEqual(round(clover["climate_adjustment"]["low_bu_ac"]), 145)
+        past = self.c.get("/api/recommendations/harrow?year=2024").json()
+        self.assertTrue(all(r["climate_adjustment"] is None for r in past["rotations"]))       # observed years untouched
+
     def test_bad_inputs(self):
         self.assertEqual(self.c.get("/api/rotation/nope").status_code, 404)
         self.assertEqual(self.c.get("/api/rotation/harrow?scenario=wet").status_code, 422)

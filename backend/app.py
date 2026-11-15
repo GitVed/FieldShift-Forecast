@@ -310,6 +310,32 @@ def past_season(field_id: str, year: int = Query(2012, ge=1981, le=2025)):
     }
 
 
+# ---------- climate yield check (P2) ----------
+
+@app.get("/api/climate-yield/{field_id}")
+def climate_yield_check(field_id: str):
+    """Essex County yield anomaly fitted on NASA POWER weather, tested on held-out years.
+    Applied only where it beats 'no change'. Everything here is DERIVED."""
+    _field(field_id)
+    from backend import climate_yield
+    cal = climate_yield.public_calibration()
+    proj = climate_yield.projections()
+    example = climate_yield.adjust("corn", 2028, 169.0)
+    return {
+        "status": "DERIVED", "field_id": field_id, "crops": cal,
+        "projection_ranges_pct": {c: {str(y): v for y, v in years.items()} for c, years in proj.items()},
+        "example": {"year": 2028, "rotation": "Corn → Soy → Winter wheat + red clover", "crop": "corn",
+                    "trial_bu_ac": 169.0, **(example or {})},
+        "source": ("Essex County yields, OMAFA county estimates 1981-2025 (data/seed/essex_yields.csv). Weather, NASA POWER "
+                   "monthly at the field cell. Projections, NASA NEX-GDDP-CMIP6 v2 SSP370, 5 models aligned to POWER."),
+        "method": ("Remove the linear yield trend, fit the yield anomaly on window rain and degree days above 10 C, test "
+                   "on years the model has not seen (leave one year out, and 5-year blocks). Applied only if both tests beat "
+                   "no change. The range is the spread across the climate models, multiplied onto the trial yield."),
+        "limits": ("County yields, not this field. One weather cell. Two weather inputs only, so heat waves, timing and "
+                   "disease are not captured. Skill is modest. A projected year is a climate scenario, not a forecast."),
+    }
+
+
 # ---------- plan ----------
 
 ROTATION_DISPLAY = {
