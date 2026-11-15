@@ -12,6 +12,10 @@
 
 ---
 
+## New map-first frontend preview
+
+On `devs/new-frontend`, run `python -m uvicorn backend.app:app --host 127.0.0.1 --port 8001`, then open `http://localhost:8001/`. The dashboard includes a 2021–2030 timeline, observed history, five-model NASA climate projections, Recommendations and a Priority crop picker. Future values are climate scenarios, not weather forecasts; historical trial yields remain historical. Existing API routes, including the original 2035 stress scenario, are preserved. See [frontend run and test instructions](docs/NEW_FRONTEND.md) and [dataset sources](RESOURCES.md).
+
 ## 1. Project summary
 
 FieldShift Forecast helps a farmer choose the right crop rotation for the future, not just for last year.

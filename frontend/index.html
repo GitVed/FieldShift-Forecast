@@ -1,6 +1,85 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FieldShift Forecast | Team Tuxedo</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"><link rel="stylesheet" href="./style.css"></head>
-<body><div class="app"><aside class="sidebar"><div class="brand"><div class="brand-icon">F<span>↗</span></div><div><strong>FieldShift</strong><small>FORECAST / TEAM TUXEDO</small></div></div><div class="side-label">WORKSPACE</div><nav aria-label="Main navigation"><button class="nav active" data-screen="detect"><span>◉</span> Detect <small>01</small></button><button class="nav" data-screen="predict"><span>◷</span> Predict <small>02</small></button><button class="nav" data-screen="plan"><span>▥</span> Plan <small>03</small></button></nav><div class="side-bottom"><div class="side-label">PILOT REGION</div><div class="pilot-min">📍 &nbsp; Harrow / Woodslee<br><span>Essex County · Ontario</span></div><div class="side-note">Built for NASA Space Apps 2026.<br>Science-led decisions for resilient farms.</div></div></aside>
-<main class="main"><header class="topbar"><div class="crumb">FIELD INTELLIGENCE <span>/</span> <strong id="crumb-screen">DETECT</strong></div><div class="top-right"><span class="status-badge sample">SAMPLE DEMO</span><span class="avatar">ST</span></div></header><div class="content"><div class="headline"><div><div class="eyebrow">HARROW, ONTARIO <span class="live-dot"></span> PILOT STUDY</div><h1 id="screen-title">Understand your field.</h1><p id="screen-desc">Explore observed climate signals and understand what the data can, and cannot, tell us.</p></div><button class="action secondary" id="reset-map">⌖ &nbsp; Locate field</button></div>
-<div class="layout"><section class="map-card"><div class="map-heading"><div><span class="mini-overline">GEOSPATIAL OVERVIEW</span><h2>Harrow field explorer</h2></div><span class="status-badge sample">SAMPLE GEOMETRY</span></div><div id="map" role="img" aria-label="Map view centered approximately on Harrow, Ontario"><div id="offline-map" class="offline-map"><div class="map-grid"></div><div class="offline-caption">HARROW / WOODSLEE AREA · SCHEMATIC MAP</div><div class="offline-polygon" id="offline-field" title="Illustrative area; not a real field polygon"></div><div class="offline-pin">⌾</div><span class="offline-town">HARROW</span><span class="offline-note">Offline schematic · not a surveyed location</span></div></div><div class="map-footer"><div class="legend"><span><i class="swatch field"></i>Illustrative field</span><span><i class="swatch grid"></i>Trend region</span><span><i class="swatch buddy"></i>Buddy region</span></div><button class="text-action" id="toggle-layers" aria-expanded="false">Map layers ▾</button></div><div class="layer-panel" id="layer-panel" hidden><label><input type="checkbox" data-layer="harrow-field" checked> harrow-field</label><label><input type="checkbox" data-layer="trend-grid-cell" checked> trend-grid-cell</label><label><input type="checkbox" data-layer="north-comparison-grid-cell" checked> north-comparison-grid-cell</label><label><input type="checkbox" data-layer="sentinel2-ndvi"> sentinel2-ndvi (unavailable)</label></div><div class="map-warning">ⓘ The map currently uses approximate sample geometry. Do not interpret it as an identified farm boundary or resolved satellite pixel.</div></section>
-<section class="panel" id="dynamic-panel" aria-live="polite"></section></div><div class="bottom-grid"><section class="explainer"><div class="explainer-icon">✦</div><div><h3>One farmer. One field. One decision.</h3><p>From NASA climate signals to a practical crop rotation plan, with the evidence and uncertainty visible at every step.</p></div></section><section class="source-box"><h3>Data integrity</h3><p>Sample = UI demonstration · Cached = retrieved data · Unverified = source confirmation required. Never treat sample figures as a prediction.</p></section></div></div><footer class="footer"><span>FieldShift Forecast · Space Apps Toronto 2026</span><span>Prototype demonstration · Not agronomic advice</span></footer></main></div><script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script><script src="./map.js"></script></body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#173a2c"><title>FieldShift · Your field, in perspective</title>
+<link rel="stylesheet" href="./fonts.css"><link rel="stylesheet" href="./vendor/leaflet.css"><link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="i-leaf" viewBox="0 0 24 24"><path d="M19 4C9 2 3 7 5 15c7 4 15-1 14-11Z"/><path d="m4 21 11-12M8 16l-1-5m5 1 5 1"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="m3 5 6-2 6 3 6-2v15l-6 2-6-3-6 2V5Zm6-2v15M15 6v15"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+<symbol id="i-rain" viewBox="0 0 24 24"><path d="M6 15a4 4 0 1 1 1-7 5 5 0 0 1 10-1 4 4 0 1 1 1 8M7 18l-1 3m7-3-1 3m7-3-1 3"/></symbol>
+<symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2c-3 5-7 9-7 13a7 7 0 0 0 14 0c0-4-4-8-7-13Z"/><path d="M9 15a3 3 0 0 0 3 3"/></symbol>
+<symbol id="i-soil" viewBox="0 0 24 24"><path d="M3 9c4-4 5 4 9 0s5 4 9 0M3 15h18M3 21h18M12 8V3m0 3c-4 0-5-2-5-4 4 0 5 2 5 4Zm0 0c4 0 5-2 5-4-4 0-5 2-5 4Z"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+<symbol id="i-print" viewBox="0 0 24 24"><path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7v-7Z"/></symbol>
+<symbol id="i-corn" viewBox="0 0 24 24"><path d="M12 22V4c0-3 6-3 6 1v7c0 5-3 7-6 10ZM12 22C4 20 2 14 3 9c6 1 9 7 9 13ZM12 22c7-3 9-7 9-12-4 2-7 5-9 12ZM12 6h6m-6 4h6m-6 4h5"/></symbol>
+<symbol id="i-soy" viewBox="0 0 24 24"><path d="M19 3C9 2 2 11 5 18c7 4 16-6 14-15Z"/><path d="m5 19 13-15"/><circle cx="9" cy="14" r="1.4"/><circle cx="13" cy="10" r="1.4"/></symbol>
+<symbol id="i-wheat" viewBox="0 0 24 24"><path d="M12 23V3m0 5C5 8 5 3 5 3s7 0 7 5Zm0 6c-7 0-7-5-7-5s7 0 7 5Zm0 6c-7 0-7-5-7-5s7 0 7 5Zm0-12c7 0 7-5 7-5s-7 0-7 5Zm0 6c7 0 7-5 7-5s-7 0-7 5Zm0 6c7 0 7-5 7-5s-7 0-7 5Z"/></symbol>
+</defs></svg>
+<a href="#main" class="skip">Skip to field outlook</a>
+<div class="app-shell">
+<aside class="rail" aria-label="Workspace navigation">
+<a href="./" class="brand" aria-label="FieldShift home"><svg><use href="#i-leaf"/></svg></a>
+<div class="rail-line"></div>
+<button class="rail-button active" id="nav-overview" aria-label="Recommendations" title="Recommendations"><svg><use href="#i-map"/></svg><span>Explore</span></button>
+<button class="rail-button" id="nav-priority" aria-label="Priority crop" title="Priority crop"><svg><use href="#i-target"/></svg><span>Priority</span></button>
+<button class="rail-button rail-bottom" id="nav-sources" aria-label="View data sources" title="Data sources"><svg><use href="#i-info"/></svg><span>Sources</span></button>
+<div class="rail-avatar" title="Harrow pilot">HF</div>
+</aside>
+<div class="workspace">
+<header class="topbar"><a class="wordmark" href="./">FieldShift<span>FORECAST</span></a><div class="topbar-right"><span class="location-pill"><span class="status-dot"></span>Harrow, Ontario</span><button class="icon-button" id="print-plan" aria-label="Print your field plan" title="Print field plan"><svg><use href="#i-print"/></svg></button></div></header>
+<main id="main">
+<section class="page-heading"><div><div class="eyebrow">A LITTLE MORE CLARITY. A BETTER NEXT SEASON.</div><h1>Your field. A future worth planning.</h1><p>Explore the conditions. Find a rotation that fits.</p></div></section>
+<div id="load-error" class="error-banner" hidden role="alert"><span id="error-message"></span><button id="retry-load">Try again</button></div>
+<div class="dashboard">
+<section class="explorer" aria-label="Interactive field outlook">
+<div class="map-card">
+<header class="map-header"><div><span class="eyebrow">YOUR REGIONAL OUTLOOK</span><h2>Harrow &amp; the seasons ahead <span class="year-inline" id="heading-year">2026</span></h2></div><span class="data-badge" id="data-badge">Loading data</span></header>
+<div class="layer-toolbar" role="group" aria-label="Map data layer">
+<button class="layer-button active" data-layer="temperature" aria-pressed="true"><svg><use href="#i-sun"/></svg>Temperature</button>
+<button class="layer-button" data-layer="precipitation" aria-pressed="false"><svg><use href="#i-rain"/></svg>Rainfall</button>
+<button class="layer-button" data-layer="humidity" aria-pressed="false"><svg><use href="#i-drop"/></svg>Humidity</button>
+<button class="layer-button" data-layer="soil_moisture" aria-pressed="false"><svg><use href="#i-soil"/></svg>Moisture</button>
+<button class="layer-button" data-layer="soil" aria-pressed="false"><svg><use href="#i-leaf"/></svg>Soil profile</button>
+</div>
+<div class="map-stage">
+<div id="map" aria-label="Interactive map of Harrow and the source data grid"></div>
+<div class="map-title-label"><span class="status-dot"></span><span id="map-period">May–September · planning window</span></div>
+
+<div class="map-reading" id="map-reading" aria-live="polite"><span class="eyebrow">GROWING-SEASON TEMPERATURE</span><strong>— <small>°C</small></strong><p>Loading the regional outlook…</p></div>
+<div class="map-unavailable" id="map-unavailable" hidden><svg><use href="#i-soil"/></svg><strong>Soil moisture isn’t projected.</strong><span>Explore measured July moisture in the historical view.</span><button class="primary-button" id="view-history">View 2025 observations <span>↗</span></button></div>
+<div class="map-legend"><div class="legend-title"><span id="legend-label">Cooler</span><span id="legend-right">Warmer</span></div><div class="color-ramp" id="legend-ramp"></div><div class="legend-values"><span id="legend-min">—</span><span id="legend-max">—</span></div></div>
+<div class="basemap-note" id="basemap-note" hidden>Basemap unavailable · source grid remains interactive</div>
+</div>
+<div class="map-caption"><span><i class="legend-square"></i><span id="grid-caption">Source-grid coverage · regional estimates</span></span><button class="text-button" id="map-sources">About this data <svg><use href="#i-arrow"/></svg></button></div>
+<section class="timeline" aria-label="Annual history and climate projection timeline">
+<div class="timeline-heading"><div><span class="eyebrow">MOVE THROUGH THE SEASONS</span><h3>Five years back. Five years ahead.</h3></div><button class="play-button" id="play-timeline" aria-label="Play timeline" aria-pressed="false"><span id="play-icon">▶</span><span id="play-label">Play</span></button></div>
+<div class="timeline-axis"><div class="timeline-chart" id="timeline-chart" aria-hidden="true"></div>
+<div class="scrubber-row"><button class="step-button" id="previous-year" aria-label="Previous year">‹</button><label for="year-range" class="sr-only">Selected year</label><input id="year-range" type="range" min="2021" max="2030" value="2026" step="1" aria-valuetext="2026, climate projection"><button class="step-button" id="next-year" aria-label="Next year">›</button></div>
+<div class="year-ticks" id="year-ticks"></div></div><div class="timeline-periods"><span><i></i>Observed history</span><span><i></i>Projected climate · SSP370</span></div>
+</section>
+</div>
+<div class="metric-strip" id="metric-strip" aria-live="polite"><div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div></div>
+<div class="outlook-footnote"><svg><use href="#i-info"/></svg><span id="outlook-footnote">Future values are climate scenarios, not forecasts of actual weather. Field boundary not surveyed.</span></div>
+</section>
+<aside class="recommendation-panel" aria-label="Crop rotation recommendations">
+<div class="panel-tabs" role="tablist" aria-label="Recommendation mode"><button id="tab-recommendations" role="tab" aria-selected="true" aria-controls="panel-body" class="panel-tab active">Recommendations</button><button id="tab-priority" role="tab" aria-selected="false" aria-controls="panel-body" class="panel-tab"><svg><use href="#i-target"/></svg>Priority</button></div>
+<div class="panel-intro"><span class="eyebrow" id="panel-eyebrow">GROW WITH A PLAN</span><h2 id="panel-title">A rotation for what’s next.</h2><p id="panel-description">Evidence-led options for your next growing seasons.</p></div>
+<form class="priority-form" id="priority-form" hidden><fieldset><legend>What do you want to grow?</legend><div class="crop-picker"><button type="button" data-crop="maize" aria-pressed="false"><svg><use href="#i-corn"/></svg><span>Corn</span></button><button type="button" data-crop="soybean" aria-pressed="false"><svg><use href="#i-soy"/></svg><span>Soybean</span></button><button type="button" data-crop="wheat" aria-pressed="false"><svg><use href="#i-wheat"/></svg><span>Wheat</span></button></div></fieldset><label for="yield-target">Your yield target <span>optional</span></label><div class="target-input"><input id="yield-target" type="number" min="0.1" step="0.1" placeholder="e.g. 150" inputmode="decimal"><span>bu/ac</span></div><div class="form-actions"><button class="primary-button" type="submit">Build my rotation <svg><use href="#i-arrow"/></svg></button><button type="button" id="reset-priority" class="text-button">Reset</button></div><p id="priority-error" class="form-error" role="alert" hidden></p><p class="input-note">Targets are checked against historical trial yields.</p></form>
+<div class="panel-results-heading"><span id="results-count">FINDING YOUR OPTIONS</span><span id="recommendation-year">2026 OUTLOOK</span></div>
+<div id="panel-body" role="tabpanel" aria-labelledby="tab-recommendations" aria-live="polite"><div class="card-skeleton"></div></div>
+<div id="option-nav" class="option-nav" hidden aria-label="Recommendation options"><button id="previous-option" class="option-arrow" aria-label="Previous recommendation">‹</button><div class="option-position"><span id="option-count" aria-live="polite">Option 1 of 3</span><div id="option-dots" class="option-dots"></div></div><button id="next-option" class="option-arrow" aria-label="Next recommendation">›</button></div><div id="climate-context" class="climate-context" hidden></div><div class="panel-bottom"><svg><use href="#i-leaf"/></svg><p>Built on NASA climate data and Ontario rotation trials.<button class="text-button" id="recommendation-method">See the evidence <span>↗</span></button></p></div>
+</aside>
+</div>
+<footer class="workspace-footer"><span>FieldShift Forecast <i>·</i> Harrow pilot</span><span>Regional climate. Historical trial evidence. Better-informed decisions.</span></footer>
+</main>
+</div>
+</div>
+<dialog id="sources-dialog" aria-labelledby="sources-title"><div class="dialog-heading"><div><span class="eyebrow">WHAT’S BEHIND THE PICTURE</span><h2 id="sources-title">A clear view of the evidence.</h2></div><button id="close-sources" class="icon-button" aria-label="Close data sources">✕</button></div><div id="sources-content"></div></dialog>
+<script src="./vendor/leaflet.js"></script><script src="./map.js"></script>
+</body></html>

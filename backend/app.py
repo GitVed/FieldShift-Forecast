@@ -21,6 +21,8 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
+from backend.outlook import router as outlook_router
 
 from backend import field_profile, rotation, stress, suitability
 from backend.provenance import load_manifest
@@ -56,6 +58,11 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="FieldShift Forecast API", lifespan=lifespan)
+app.include_router(outlook_router)
+
+@app.get("/", include_in_schema=False)
+def home():
+    return RedirectResponse("/frontend/")
 
 try:
     from backend.data_api import make_router

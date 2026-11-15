@@ -9,3 +9,5 @@ data/seed/power_precipitation_north_1981_2025.csv,540,1981-01-01,2025-12-01,"{""
 data/seed/power_t2m_harrow_1981_2025.csv,540,1981-01-01,2025-12-01,"{""valid"": 540}",degC
 data/seed/power_temperature_north_1981_2025.csv,540,1981-01-01,2025-12-01,"{""valid"": 540}",degC
 data/seed/soilgrids_harrow.csv,18,static,static,"{""invalid"": 18}",%; g/kg; pH
+data/seed/nex_monthly_harrow.csv,7200,1991-01-01,2030-12-01,"{""valid"": 7200}",%; degC; mm/month
+data/seed/nex_adjusted_harrow.csv,2880,2015-01-01,2030-12-01,"{""model_projection"": 2880}",%; degC; mm/month

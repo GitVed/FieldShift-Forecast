@@ -1,2 +1,5 @@
 # Preserve CSV bytes so provenance hashes match on every platform.
 *.csv -text -whitespace
+# Preserve upstream library/font bytes and their recorded asset hashes.
+frontend/vendor/** -text -whitespace
+frontend/fonts/** -text -whitespace

@@ -1,0 +1,15 @@
+file,url,sha256
+frontend/vendor/leaflet.js,https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js,db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a
+frontend/vendor/leaflet.css,https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css,a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6
+frontend/vendor/images/layers.png,https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/layers.png,1dbbe9d028e292f36fcba8f8b3a28d5e8932754fc2215b9ac69e4cdecf5107c6
+frontend/vendor/images/layers-2x.png,https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/layers-2x.png,066daca850d8ffbef007af00b06eac0015728dee279c51f3cb6c716df7c42edf
+frontend/vendor/images/marker-icon.png,https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon.png,574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437
+frontend/vendor/images/marker-icon-2x.png,https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-icon-2x.png,00179c4c1ee830d3a108412ae0d294f55776cfeb085c60129a39aa6fc4ae2528
+frontend/vendor/images/marker-shadow.png,https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/images/marker-shadow.png,264f5c640339f042dd729062cfc04c17f8ea0f29882b538e3848ed8f10edb4da
+frontend/vendor/LEAFLET-LICENSE.txt,https://cdn.jsdelivr.net/npm/leaflet@1.9.4/LICENSE,53e8dc25862014e4324741ca18fbe3611e11d42ef69f59f86ea8c5389647d4cb
+.cache/dmsans.css,https://fonts.googleapis.com/css2?family=DM+Sans:wght@400..800&display=swap,a588c85f2b24190bea37df977b2a444562a2af8accc1181fe1796d1b6f0c2b29
+frontend/fonts/dmsans.ttf,https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxhTg.ttf,b0ae3e89a7d3ef2b1838bb4b1ceb0b17cc3435af061eee809d76aa623ff116e9
+frontend/fonts/dmsans-LICENSE.txt,https://raw.githubusercontent.com/google/fonts/main/ofl/dmsans/OFL.txt,9af36190332437f5ecd09974de43c1f7c77a310a996cdd8ceb25628b458840e1
+.cache/outfit.css,https://fonts.googleapis.com/css2?family=Outfit:wght@400..800&display=swap,99c0cb9fcac681ec1abaf81c6f80aaeeec505a6f6e95f3a367617eeb87058bf8
+frontend/fonts/outfit.ttf,https://fonts.gstatic.com/s/outfit/v15/QGYyz_MVcBeNP4NjuGObqx1XmO1I4TC1C4E.ttf,6a8c9be856a6b9e09c66615634904616152c9de5e44db343a3ced240479c586a
+frontend/fonts/outfit-LICENSE.txt,https://raw.githubusercontent.com/google/fonts/main/ofl/outfit/OFL.txt,c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416

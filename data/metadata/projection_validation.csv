@@ -1,0 +1,16 @@
+model,variable,period,metric,mean_bias,climatology_rmse,unit
+ACCESS-CM2,temperature,2015-2025,12 monthly climatology comparison; not annual forecast skill,-0.0728022847915729,0.9057203397335428,degC
+ACCESS-CM2,precipitation,2015-2025,12 monthly climatology comparison; not annual forecast skill,3.538632364952445,20.6565351199845,mm/month
+ACCESS-CM2,humidity,2015-2025,12 monthly climatology comparison; not annual forecast skill,-1.1989943956691451,3.8907994906572525,%
+CanESM5,temperature,2015-2025,12 monthly climatology comparison; not annual forecast skill,0.04670522120942618,0.5607633845056481,degC
+CanESM5,precipitation,2015-2025,12 monthly climatology comparison; not annual forecast skill,4.7982623252734085,14.694375914012419,mm/month
+CanESM5,humidity,2015-2025,12 monthly climatology comparison; not annual forecast skill,0.20726415448872024,2.6203701294052526,%
+MIROC6,temperature,2015-2025,12 monthly climatology comparison; not annual forecast skill,-0.7885228560050015,1.2185643543757787,degC
+MIROC6,precipitation,2015-2025,12 monthly climatology comparison; not annual forecast skill,-0.21003099359431468,10.83704695900496,mm/month
+MIROC6,humidity,2015-2025,12 monthly climatology comparison; not annual forecast skill,-0.1503019950064702,0.9880901046951995,%
+MPI-ESM1-2-LR,temperature,2015-2025,12 monthly climatology comparison; not annual forecast skill,-1.127601237994271,1.4532439558628374,degC
+MPI-ESM1-2-LR,precipitation,2015-2025,12 monthly climatology comparison; not annual forecast skill,15.87808844824198,21.88117115907581,mm/month
+MPI-ESM1-2-LR,humidity,2015-2025,12 monthly climatology comparison; not annual forecast skill,2.515718282989571,3.2488758391370225,%
+MRI-ESM2-0,temperature,2015-2025,12 monthly climatology comparison; not annual forecast skill,-0.049206040781424765,1.0113475808578771,degC
+MRI-ESM2-0,precipitation,2015-2025,12 monthly climatology comparison; not annual forecast skill,3.1373284659989147,14.751218684654793,mm/month
+MRI-ESM2-0,humidity,2015-2025,12 monthly climatology comparison; not annual forecast skill,1.1441412029976092,1.540734474427059,%
