@@ -208,7 +208,52 @@ def drying_proxy(temperature,humidity):
     return .6108*math.exp(17.27*temperature/(temperature+237.3))*(1-humidity/100)
 
 
-def rank_annual_options(rows,crop_sequences,selected,baseline,soil):
+@functools.lru_cache(maxsize=1)
+def _may_sep_rain():
+    """May-Sep rain totals: POWER by year (observed) and NEX by (model, year) (projected)."""
+    power=defaultdict(float)
+    with open(ROOT/'data/seed/power_precip_harrow_1981_2025.csv',encoding='utf-8',newline='') as f:
+        for r in csv.DictReader(f):
+            if r['value'] and r.get('quality_flag','valid')=='valid' and 5<=int(r['date'][5:7])<=9:
+                power[int(r['date'][:4])]+=float(r['value'])
+    nex=defaultdict(float)
+    path=ROOT/'data/seed/nex_adjusted_harrow.csv'
+    if path.exists():
+        with open(path,encoding='utf-8',newline='') as f:
+            for r in csv.DictReader(f):
+                if r['variable']=='precipitation' and 5<=int(r['date'][5:7])<=9:
+                    nex[(r['model'],int(r['date'][:4]))]+=float(r['value'])
+    return dict(power),dict(nex)
+
+
+def season_outlook(year):
+    """Is this year dry-leaning? The driest third of POWER May-Sep rain 1991-2020 is the
+    usual "below normal" tercile. Observed years use measured POWER rain. Projected years
+    use a majority vote of the NASA NEX models. Dry-leaning years use the 2012 dry-year order."""
+    power,nex=_may_sep_rain()
+    base=sorted(power[y] for y in range(1991,2021))
+    cutoff=base[len(base)//3-1]
+    if year<=2025:
+        rain=power[year];votes=int(rain<=cutoff);models=1;dry=bool(votes)
+        detail=f"Measured NASA POWER May to September rain {rain:.0f} mm"
+    else:
+        values=[v for (m,y),v in nex.items() if y==year]
+        votes=sum(v<=cutoff for v in values);models=len(values);dry=votes*2>models
+        detail=f"{votes} of {models} NASA climate models"
+    third=f"the driest third of 1991-2020 (at or below {cutoff:.0f} mm)"
+    if year<=2025:
+        text=(f"{year} was dry-leaning. Measured NASA POWER May to September rain was {rain:.0f} mm, in {third}, so this year uses the 2012 dry-year order." if dry else
+              f"{year} was not dry-leaning. Measured NASA POWER May to September rain was {rain:.0f} mm, above {third}, so this year uses the trial evidence order.")
+    else:
+        text=(f"{year} looks dry-leaning. {votes} of {models} NASA climate models put May to September rain in {third}, so this year uses the 2012 dry-year order." if dry else
+              f"{year} is not dry-leaning. Only {votes} of {models} NASA climate models put May to September rain in {third}, so this year uses the trial evidence order.")
+    return dict(year=year,dry_leaning=dry,votes=votes,models=models,cutoff_mm=round(cutoff,1),
+        baseline='NASA POWER May to September rain, 1991-2020, driest third',
+        order='2012 dry-year order' if dry else 'trial evidence order',text=text,
+        limits='The 2012 dry-year order uses drought results from US sites (Bowles et al. 2020) and how much crop water need the 2012 rain covered. No dry-year bushels are invented. Trial yields do not change.')
+
+
+def rank_annual_options(rows,crop_sequences,selected,baseline,soil,dry_leaning=False):
     """Explicit decision rules, not fitted crop-response weights or yield forecasts.
 
     Trial evidence first (decided Sun Nov 15): target support (all, some or none
@@ -252,7 +297,9 @@ def rank_annual_options(rows,crop_sequences,selected,baseline,soil):
         # Exact ties only (no invented closeness threshold): this year's rain fit, then the
         # midpoint of the DERIVED corn climate range in projected years, then the trial score.
         adj=row.get('climate_adjustment');corn_mid=((adj['low_bu_ac']+adj['high_bu_ac'])/2) if adj else -1
-        key=(target_group,target_gap,-(trial if trial is not None else -1),-(rain_fit if rain_fit is not None else -1),-corn_mid,-(row['score'] if row['score'] is not None else -1),ph_failures,
+        # Dry-leaning years (season_outlook) put the 2012 dry-year rank ahead of the trial yield.
+        dry_rank=(row.get('rank_dry') or 99) if dry_leaning else 0
+        key=(target_group,target_gap,dry_rank,-(trial if trial is not None else -1),-(rain_fit if rain_fit is not None else -1),-corn_mid,-(row['score'] if row['score'] is not None else -1),ph_failures,
              -(rain_fit if rain_fit is not None else -1),-resilience,-gaez_fit,row['id'])
         keys[row['id']]=key
         row['planning_score']=round(rain_fit,1) if rain_fit is not None else None
@@ -340,7 +387,10 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
         row['reference_reason']=row['reason']
         row['reason']=f"Historical trial index {row['score']}; ranking also considers published drought-resilience evidence. {year} rain coverage is a separate check. Trial yields are historical references, not projected yields."
     sequences={row['id']:rotation.ROTATIONS[names[row['id']]] for row in result['rotations']}
-    context=rank_annual_options(result['rotations'],sequences,selected,data['baseline'],data['soil'])
+    outlook=season_outlook(year)
+    context=rank_annual_options(result['rotations'],sequences,selected,data['baseline'],data['soil'],dry_leaning=outlook['dry_leaning'])
+    for row in result['rotations']:
+        row['order_basis']=outlook['order']
     for row in result['rotations']:
         row['water_advice']=water_advice(row,selected,sequences[row['id']])
         assessed=row['water_advice']['assessed_crops']
@@ -381,7 +431,8 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
     count_note=(f"Only {len(rows)} trial rotations{(' include '+label) if crop else ''}. These are the rotations with Harrow trial yields. Other crops have suitability only, in the Other crops tab.")
     year_note=('Trial yields are historical, so they stay the same from 2021 to 2040. The year changes the rain check'
                +(', and from 2026 the climate range for corn in rotations that grow it' if any('corn' in sequences[r['id']] for r in rows) else '')+'.')
-    result.update(target_support=support,target_position=target_position,rotation_count_note=count_note,year_note=year_note,ranking_summary=summary,climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
+    summary=outlook['text']+' '+summary
+    result.update(season_outlook=outlook,target_support=support,target_position=target_position,rotation_count_note=count_note,year_note=year_note,ranking_summary=summary,climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
         model_count=selected['model_count'],message=None,
         ranking='Trial evidence first: target support, then the trial yield of your crop or the trial yield index, then pH, then the selected year rain fit, sourced drought resilience and period GAEZ suitability. Rule-based, not a trained yield forecast.',
         suitability_note='GAEZ is period-based suitability, not annual prediction accuracy or a probability.',

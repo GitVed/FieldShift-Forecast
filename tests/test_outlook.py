@@ -108,12 +108,15 @@ class OutlookTests(unittest.TestCase):
         self.assertEqual(dry['climate_context']['year'],2025)
 
     def test_priority_year_and_target_recompute_order(self):
-        # Decided Sun Nov 15: trial evidence ranks first; the year changes the rain-fit check, not the order.
+        # Plan A (Sun Nov 15): a dry-leaning year (measured 2025 POWER rain in the driest third of
+        # 1991-2020) uses the 2012 dry-year order; a normal year (2021) uses the trial evidence order.
         wet=self.client.get('/api/recommendations/harrow?year=2021&must_grow=soybean').json()
         dry=self.client.get('/api/recommendations/harrow?year=2025&must_grow=soybean').json()
-        self.assertEqual([r['id'] for r in wet['rotations']],[r['id'] for r in dry['rotations']])
+        self.assertFalse(wet['season_outlook']['dry_leaning']);self.assertTrue(dry['season_outlook']['dry_leaning'])
+        self.assertNotEqual([r['id'] for r in wet['rotations']],[r['id'] for r in dry['rotations']])
         self.assertNotEqual([r['planning_score'] for r in wet['rotations']],[r['planning_score'] for r in dry['rotations']])
         self.assertEqual(wet['rotations'][0]['id'],'corn-soy-wheat')            # highest soybean trial yield, 64
+        self.assertEqual([r['rank_dry'] for r in dry['rotations']],sorted(r['rank_dry'] for r in dry['rotations']))
         # Target bug: at 60 soy, corn-soy-wheat (trial 64 meets, long-term 52 does not) must rank first, not last.
         sixty=self.client.get('/api/recommendations/harrow?year=2025&must_grow=soybean&need_bu=60').json()
         self.assertEqual(sixty['rotations'][0]['id'],'corn-soy-wheat')

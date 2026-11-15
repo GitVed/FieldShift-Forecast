@@ -61,7 +61,7 @@ class CropTargetYearMatrix(unittest.TestCase):
     def test_trial_yields_do_not_change_with_year(self):
         for crop in CROPS:
             for target in TARGETS:
-                seen = {tuple((r["id"], r["picked_crop_yield_bu_ac"]) for r in self.data[crop, y, target]["rotations"]) for y in YEARS}
+                seen = {frozenset((r["id"], r["picked_crop_yield_bu_ac"]) for r in self.data[crop, y, target]["rotations"]) for y in YEARS}
                 self.assertEqual(len(seen), 1, (crop, target))
 
     def test_year_changes_the_rain_check(self):
@@ -99,6 +99,24 @@ class CropTargetYearMatrix(unittest.TestCase):
         self.assertTrue(all(r["tie_note"] and "Tie on wheat" in r["tie_note"] for r in tied))
         self.assertGreaterEqual(tied[0]["score"], tied[1]["score"])
         self.assertIsNone([r for r in rows if r["picked_crop_yield_bu_ac"] == 59.5][0]["tie_note"])
+
+    def test_dry_leaning_years_reorder_from_nasa_rain(self):
+        from backend.outlook import season_outlook
+        dry = [y for y in range(2021, 2041) if season_outlook(y)["dry_leaning"]]
+        self.assertEqual(dry, [2022, 2025, 2027, 2032, 2036, 2039, 2040])
+        for y in range(2026, 2041):
+            o = season_outlook(y)
+            self.assertEqual(o["models"], 5)
+            self.assertEqual(o["dry_leaning"], o["votes"] >= 3)
+        c = TestClient(app)
+        normal = [r["id"] for r in c.get("/api/recommendations/harrow?year=2026").json()["rotations"]]
+        drier = c.get("/api/recommendations/harrow?year=2027").json()
+        self.assertNotEqual(normal, [r["id"] for r in drier["rotations"]])
+        self.assertTrue(all(r["order_basis"] == "2012 dry-year order" for r in drier["rotations"]))
+        self.assertEqual([r["rank_dry"] for r in drier["rotations"]], [1, 2, 3, 4])
+        # Trial yields are the same in both years; only the order changed.
+        self.assertEqual({r["id"]: r["score"] for r in drier["rotations"]},
+                         {r["id"]: r["score"] for r in c.get("/api/recommendations/harrow?year=2026").json()["rotations"]})
 
     def test_notes_name_the_count_and_the_year_range(self):
         d = self.data["soybean", 2035, 60]

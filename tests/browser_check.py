@@ -32,6 +32,7 @@ def run(url,historical_preview=False):
         assert page.locator('.leaflet-overlay-pane > svg').evaluate('(e)=>e.getBoundingClientRect().width')>200, 'Map overlay SVG clipped by icon CSS'
         expect(page.locator('#option-count')).to_have_text('Option 1 of 4')  # all 4 trial rotations, none hidden
         expect(page.locator('#timeline-note')).to_contain_text('do not change with the year')
+        expect(page.locator('#timeline-note')).to_contain_text('driest third')
         expect(page.locator('.rotation-card .score-basis')).to_contain_text('Based on')
         expect(page.locator('.rotation-card .dry-rank')).to_contain_text('2012 dry-year rank')
         expect(page.locator('.rotation-card')).not_to_contain_text('100% of needs')

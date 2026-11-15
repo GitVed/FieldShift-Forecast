@@ -8,7 +8,7 @@ Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we wo
 
 ## Status, Sat evening
 
-Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 109 tests pass. It is not on main yet.
+Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 110 tests pass.
 
 Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/. Tests: `pip install -r requirements-dev.txt`, then `python -m pytest -q`
 
@@ -81,6 +81,13 @@ Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:a
 - New `tests/test_crop_target_year_matrix.py`: corn, soybean, wheat x targets 50, 60, 90, 160, 170, 200 x years 2021, 2026, 2035, 2040
 - 109 tests and Dev's browser check pass, desktop, mobile and offline
 - Next: Dev, Shlok and Vedant pull `ved/model`, run it and say it works. Then merge to main
+
+**Done Sun (Plan A, order follows the year)**
+- A year is dry-leaning when NASA May to September rain falls in the driest third of 1991-2020 (378 mm or less, from POWER). Observed years use measured POWER; projected years use a 3 of 5 vote of the NEX models
+- Dry-leaning years use the 2012 dry-year order (Bowles et al. drought evidence, US sites, then 2012 water cover). Other years use the trial evidence order. No yields changed or invented
+- Dry-leaning: 2022, 2025, 2027, 2032, 2036, 2039, 2040. The default and soybean lists reorder in those years; corn and wheat keep the same order because their dry-year rank agrees
+- Card pill, results line and the note under the year slider say which order is used and why
+- 110 tests and the browser check pass
 
 **Still UNVERIFIED or not available (owner: you)**
 1. Corn yield period: the Top Crop Manager article gives no period for the 2001-trial corn figures
