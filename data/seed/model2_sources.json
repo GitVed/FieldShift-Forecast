@@ -1,0 +1,42 @@
+[
+  {
+    "file": "data/seed/harrow_trial_yields.csv",
+    "source": "https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans",
+    "retrieved_or_generated_date": "2026-11-14",
+    "units": "bu/ac and reported comparisons",
+    "label": "CACHED",
+    "coordinates": null,
+    "coordinate_note": "Yield evidence is Woodslee trial context, not a verified match to pilot coordinates; prices are Ontario regional aggregates; fixtures have no field location.",
+    "note": "Only VERIFIED rows enter numeric yield output. Other legacy claims are retained but excluded."
+  },
+  {
+    "file": "data/seed/model2_prices.json",
+    "source": "https://gfo.ca/average-commodity-prices/",
+    "retrieved_or_generated_date": "2026-11-14",
+    "units": "CAD/tonne converted to CAD/bu",
+    "label": "CACHED",
+    "coordinates": null,
+    "coordinate_note": "Yield evidence is Woodslee trial context, not a verified match to pilot coordinates; prices are Ontario regional aggregates; fixtures have no field location.",
+    "note": "September 2026 regional weighted averages. Standard conversion assumptions in each crop record."
+  },
+  {
+    "file": "data/seed/model2_sample_output.json",
+    "source": "backend/rotation.py:SAMPLE_SUITABILITY",
+    "retrieved_or_generated_date": "2026-11-14",
+    "units": "prototype index and component references",
+    "label": "SAMPLE",
+    "coordinates": null,
+    "coordinate_note": "Yield evidence is Woodslee trial context, not a verified match to pilot coordinates; prices are Ontario regional aggregates; fixtures have no field location.",
+    "note": "Generated SAMPLE fixture, not empirical field data."
+  },
+  {
+    "file": "data/seed/model2_evidence_output.json",
+    "source": "backend/rotation.py:SAMPLE_SUITABILITY",
+    "retrieved_or_generated_date": "2026-11-14",
+    "units": "pending scores and component references",
+    "label": "SAMPLE",
+    "coordinates": null,
+    "coordinate_note": "Yield evidence is Woodslee trial context, not a verified match to pilot coordinates; prices are Ontario regional aggregates; fixtures have no field location.",
+    "note": "SAMPLE suitability inputs, evidence_only policy; no numerical rotation ranks."
+  }
+]

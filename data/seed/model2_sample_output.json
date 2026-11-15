@@ -1,0 +1,580 @@
+[
+  {
+    "name": "corn-soy-wheat",
+    "crops": [
+      "corn",
+      "soybean",
+      "wheat"
+    ],
+    "status": "scored",
+    "not_scored_crops": [],
+    "overall_percent": 100.0,
+    "breakdown": {
+      "average_suitability": 80.33333333333333,
+      "rotation_benefit": 20.0,
+      "soil_penalty": 0.0,
+      "unclamped_percent": 100.33333333333333,
+      "crop_suitability": {
+        "corn": {
+          "percent": 71.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        },
+        "soybean": {
+          "percent": 88.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        },
+        "wheat": {
+          "percent": 82.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        }
+      },
+      "policy": "sample_diversity",
+      "policy_source": "SAMPLE prototype assumptions",
+      "score_kind": "prototype index, not probability of success",
+      "climate_adjustment": 1.0,
+      "rotation_multiplier": 1.0
+    },
+    "yield_bu_ac": {
+      "corn": "UNVERIFIED",
+      "soybean": 64.0,
+      "wheat": "UNVERIFIED"
+    },
+    "yield_references": {
+      "corn": null,
+      "soybean": {
+        "value": 64.0,
+        "source": "https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans",
+        "period": "5-year average reported in April 2021; calendar years not specified",
+        "note": "Firsthand Craig Drury interview transcript. Historical reference, not a prediction.",
+        "label": "CACHED",
+        "kind": "observed trial reference, not predicted yield"
+      },
+      "wheat": null
+    },
+    "revenue_per_ac": "UNVERIFIED (missing crop yields)",
+    "revenue_detail": {
+      "currency": "CAD",
+      "unit": "CAD/ac/year",
+      "kind": "gross revenue, not profit",
+      "missing_yields": [
+        "corn",
+        "wheat"
+      ],
+      "missing_prices": [],
+      "prices": {
+        "corn": {
+          "value": 6.9950213371266,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 275.38,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 39.368,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        },
+        "soybean": {
+          "value": 16.461463096015677,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 604.86,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 36.744,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        },
+        "wheat": {
+          "value": 8.58480296102765,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 315.44,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 36.744,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        }
+      },
+      "by_crop_year": [],
+      "label": "CACHED"
+    },
+    "scenario": "normal",
+    "label": "SAMPLE",
+    "rank": 1,
+    "notes": [
+      "Trial yields are historical references, unchanged across scenarios.",
+      "Climate adjustment 1 is an assumption, not evidence of no climate effect.",
+      "Red clover is underseeded, not an extra cash-crop year.",
+      "Trial location differs from the configured pilot point; see EVIDENCE.md."
+    ]
+  },
+  {
+    "name": "corn-soy-wheat plus red clover",
+    "crops": [
+      "corn",
+      "soybean",
+      "wheat"
+    ],
+    "status": "scored",
+    "not_scored_crops": [],
+    "overall_percent": 100.0,
+    "breakdown": {
+      "average_suitability": 80.33333333333333,
+      "rotation_benefit": 20.0,
+      "soil_penalty": 0.0,
+      "unclamped_percent": 100.33333333333333,
+      "crop_suitability": {
+        "corn": {
+          "percent": 71.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        },
+        "soybean": {
+          "percent": 88.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        },
+        "wheat": {
+          "percent": 82.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        }
+      },
+      "policy": "sample_diversity",
+      "policy_source": "SAMPLE prototype assumptions",
+      "score_kind": "prototype index, not probability of success",
+      "climate_adjustment": 1.0,
+      "rotation_multiplier": 1.0
+    },
+    "yield_bu_ac": {
+      "corn": "UNVERIFIED",
+      "soybean": "UNVERIFIED",
+      "wheat": "UNVERIFIED"
+    },
+    "yield_references": {
+      "corn": null,
+      "soybean": null,
+      "wheat": null
+    },
+    "revenue_per_ac": "UNVERIFIED (missing crop yields)",
+    "revenue_detail": {
+      "currency": "CAD",
+      "unit": "CAD/ac/year",
+      "kind": "gross revenue, not profit",
+      "missing_yields": [
+        "corn",
+        "soybean",
+        "wheat"
+      ],
+      "missing_prices": [],
+      "prices": {
+        "corn": {
+          "value": 6.9950213371266,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 275.38,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 39.368,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        },
+        "soybean": {
+          "value": 16.461463096015677,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 604.86,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 36.744,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        },
+        "wheat": {
+          "value": 8.58480296102765,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 315.44,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 36.744,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        }
+      },
+      "by_crop_year": [],
+      "label": "CACHED"
+    },
+    "scenario": "normal",
+    "label": "SAMPLE",
+    "rank": 1,
+    "notes": [
+      "Trial yields are historical references, unchanged across scenarios.",
+      "Climate adjustment 1 is an assumption, not evidence of no climate effect.",
+      "Red clover is underseeded, not an extra cash-crop year.",
+      "Trial location differs from the configured pilot point; see EVIDENCE.md."
+    ]
+  },
+  {
+    "name": "soy-soy-wheat",
+    "crops": [
+      "soybean",
+      "soybean",
+      "wheat"
+    ],
+    "status": "scored",
+    "not_scored_crops": [],
+    "overall_percent": 92.66666666666667,
+    "breakdown": {
+      "average_suitability": 86.0,
+      "rotation_benefit": 10.0,
+      "soil_penalty": 3.3333333333333335,
+      "unclamped_percent": 92.66666666666667,
+      "crop_suitability": {
+        "soybean": {
+          "percent": 88.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        },
+        "wheat": {
+          "percent": 82.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        }
+      },
+      "policy": "sample_diversity",
+      "policy_source": "SAMPLE prototype assumptions",
+      "score_kind": "prototype index, not probability of success",
+      "climate_adjustment": 1.0,
+      "rotation_multiplier": 1.0
+    },
+    "yield_bu_ac": {
+      "soybean": 53.0,
+      "wheat": "UNVERIFIED"
+    },
+    "yield_references": {
+      "soybean": {
+        "value": 53.0,
+        "source": "https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans",
+        "period": "5-year average reported in April 2021; calendar years not specified",
+        "note": "Firsthand Craig Drury interview transcript. Historical reference, not a prediction.",
+        "label": "CACHED",
+        "kind": "observed trial reference, not predicted yield"
+      },
+      "wheat": null
+    },
+    "revenue_per_ac": "UNVERIFIED (missing crop yields)",
+    "revenue_detail": {
+      "currency": "CAD",
+      "unit": "CAD/ac/year",
+      "kind": "gross revenue, not profit",
+      "missing_yields": [
+        "wheat"
+      ],
+      "missing_prices": [],
+      "prices": {
+        "soybean": {
+          "value": 16.461463096015677,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 604.86,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 36.744,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        },
+        "wheat": {
+          "value": 8.58480296102765,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 315.44,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 36.744,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        }
+      },
+      "by_crop_year": [],
+      "label": "CACHED"
+    },
+    "scenario": "normal",
+    "label": "SAMPLE",
+    "rank": 3,
+    "notes": [
+      "Trial yields are historical references, unchanged across scenarios.",
+      "Climate adjustment 1 is an assumption, not evidence of no climate effect.",
+      "Red clover is underseeded, not an extra cash-crop year.",
+      "Trial location differs from the configured pilot point; see EVIDENCE.md."
+    ]
+  },
+  {
+    "name": "corn-soy",
+    "crops": [
+      "corn",
+      "soybean"
+    ],
+    "status": "scored",
+    "not_scored_crops": [],
+    "overall_percent": 89.5,
+    "breakdown": {
+      "average_suitability": 79.5,
+      "rotation_benefit": 10.0,
+      "soil_penalty": 0.0,
+      "unclamped_percent": 89.5,
+      "crop_suitability": {
+        "corn": {
+          "percent": 71.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        },
+        "soybean": {
+          "percent": 88.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        }
+      },
+      "policy": "sample_diversity",
+      "policy_source": "SAMPLE prototype assumptions",
+      "score_kind": "prototype index, not probability of success",
+      "climate_adjustment": 1.0,
+      "rotation_multiplier": 1.0
+    },
+    "yield_bu_ac": {
+      "corn": "UNVERIFIED",
+      "soybean": "UNVERIFIED"
+    },
+    "yield_references": {
+      "corn": null,
+      "soybean": null
+    },
+    "revenue_per_ac": "UNVERIFIED (missing crop yields)",
+    "revenue_detail": {
+      "currency": "CAD",
+      "unit": "CAD/ac/year",
+      "kind": "gross revenue, not profit",
+      "missing_yields": [
+        "corn",
+        "soybean"
+      ],
+      "missing_prices": [],
+      "prices": {
+        "corn": {
+          "value": 6.9950213371266,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 275.38,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 39.368,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        },
+        "soybean": {
+          "value": 16.461463096015677,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 604.86,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 36.744,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        }
+      },
+      "by_crop_year": [],
+      "label": "CACHED"
+    },
+    "scenario": "normal",
+    "label": "SAMPLE",
+    "rank": 4,
+    "notes": [
+      "Trial yields are historical references, unchanged across scenarios.",
+      "Climate adjustment 1 is an assumption, not evidence of no climate effect.",
+      "Red clover is underseeded, not an extra cash-crop year.",
+      "Trial location differs from the configured pilot point; see EVIDENCE.md."
+    ]
+  },
+  {
+    "name": "continuous soybean",
+    "crops": [
+      "soybean"
+    ],
+    "status": "scored",
+    "not_scored_crops": [],
+    "overall_percent": 78.0,
+    "breakdown": {
+      "average_suitability": 88.0,
+      "rotation_benefit": 0.0,
+      "soil_penalty": 10.0,
+      "unclamped_percent": 78.0,
+      "crop_suitability": {
+        "soybean": {
+          "percent": 88.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        }
+      },
+      "policy": "sample_diversity",
+      "policy_source": "SAMPLE prototype assumptions",
+      "score_kind": "prototype index, not probability of success",
+      "climate_adjustment": 1.0,
+      "rotation_multiplier": 1.0
+    },
+    "yield_bu_ac": {
+      "soybean": 41.0
+    },
+    "yield_references": {
+      "soybean": {
+        "value": 41.0,
+        "source": "https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans",
+        "period": "5-year average reported in April 2021; calendar years not specified",
+        "note": "Firsthand Craig Drury interview transcript. Historical reference, not a prediction.",
+        "label": "CACHED",
+        "kind": "observed trial reference, not predicted yield"
+      }
+    },
+    "revenue_per_ac": 674.92,
+    "revenue_detail": {
+      "currency": "CAD",
+      "unit": "CAD/ac/year",
+      "kind": "gross revenue, not profit",
+      "missing_yields": [],
+      "missing_prices": [],
+      "prices": {
+        "soybean": {
+          "value": 16.461463096015677,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 604.86,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 36.744,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        }
+      },
+      "by_crop_year": [
+        674.9199869366428
+      ],
+      "label": "CACHED"
+    },
+    "scenario": "normal",
+    "label": "SAMPLE",
+    "rank": 5,
+    "notes": [
+      "Trial yields are historical references, unchanged across scenarios.",
+      "Climate adjustment 1 is an assumption, not evidence of no climate effect.",
+      "Red clover is underseeded, not an extra cash-crop year.",
+      "Trial location differs from the configured pilot point; see EVIDENCE.md."
+    ]
+  },
+  {
+    "name": "continuous corn",
+    "crops": [
+      "corn"
+    ],
+    "status": "scored",
+    "not_scored_crops": [],
+    "overall_percent": 61.0,
+    "breakdown": {
+      "average_suitability": 71.0,
+      "rotation_benefit": 0.0,
+      "soil_penalty": 10.0,
+      "unclamped_percent": 61.0,
+      "crop_suitability": {
+        "corn": {
+          "percent": 71.0,
+          "source": "SAMPLE fixture",
+          "label": "SAMPLE"
+        }
+      },
+      "policy": "sample_diversity",
+      "policy_source": "SAMPLE prototype assumptions",
+      "score_kind": "prototype index, not probability of success",
+      "climate_adjustment": 1.0,
+      "rotation_multiplier": 1.0
+    },
+    "yield_bu_ac": {
+      "corn": "UNVERIFIED"
+    },
+    "yield_references": {
+      "corn": null
+    },
+    "revenue_per_ac": "UNVERIFIED (missing crop yields)",
+    "revenue_detail": {
+      "currency": "CAD",
+      "unit": "CAD/ac/year",
+      "kind": "gross revenue, not profit",
+      "missing_yields": [
+        "corn"
+      ],
+      "missing_prices": [],
+      "prices": {
+        "corn": {
+          "value": 6.9950213371266,
+          "unit": "CAD/bu",
+          "currency": "CAD",
+          "period": "2026-09",
+          "label": "CACHED",
+          "source": "https://gfo.ca/average-commodity-prices/",
+          "retrieved_date": "2026-11-14",
+          "original_value": 275.38,
+          "original_unit": "CAD/tonne",
+          "bushels_per_tonne": 39.368,
+          "conversion_source": "https://pubsaskdev.blob.core.windows.net/pubsask-prod/83604/83604-agv1304-pdf.pdf",
+          "note": "Historical Ontario weighted average, not a current elevator bid. Standard grain mass conversion is an assumption; actual test weight and grade may differ. Wheat is an aggregate, not a winter wheat grade quote."
+        }
+      },
+      "by_crop_year": [],
+      "label": "CACHED"
+    },
+    "scenario": "normal",
+    "label": "SAMPLE",
+    "rank": 6,
+    "notes": [
+      "Trial yields are historical references, unchanged across scenarios.",
+      "Climate adjustment 1 is an assumption, not evidence of no climate effect.",
+      "Red clover is underseeded, not an extra cash-crop year.",
+      "Trial location differs from the configured pilot point; see EVIDENCE.md."
+    ]
+  }
+]

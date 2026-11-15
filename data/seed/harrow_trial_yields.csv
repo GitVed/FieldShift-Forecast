@@ -1,21 +1,21 @@
-rotation,crop,value,unit,baseline,period,source,note
-continuous soybean,soybean,41,bu/ac,,5-year average,SUMMARY-README s5 (AAFC Harrow; Drury),
-soy-soy-wheat,UNVERIFIED,53,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),Crop for this number is not stated in the docs
-soy-soy-wheat,UNVERIFIED,30,percent,UNVERIFIED,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),Doc says plus 30 percent. Base and crop not stated
-corn-soy-wheat,UNVERIFIED,64,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),Crop for this number is not stated. Vedant to check (VS1)
-corn-soy-wheat,UNVERIFIED,50,percent,UNVERIFIED,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),Doc says plus 50 percent. 64 vs 41 is about 56 percent so base is unclear
-continuous corn,corn,118,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),
-corn-soy,UNVERIFIED,154,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),Crop for this number is not stated in the docs
-corn-soy-wheat plus red clover,corn,169,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),
-corn-soy-wheat plus red clover,corn,43,percent,continuous corn,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),
-corn-soy-wheat (with and without red clover),corn,38 to 42,percent,monoculture corn,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),Corn grain yield gain in 3-year rotation
-corn-soy-wheat,soybean,51 to 54,percent,monoculture soybean,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),Soy yield gain in same 3-year rotation
-continuous soybean,soil organic carbon,under 2,percent,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),
-corn-soy-wheat,soil organic carbon,2.25,percent,,after 17 years,SUMMARY-README s5 (AAFC Harrow; Drury),Doc says winter wheat in this rotation
-corn-soy-wheat,soil organic carbon,16,percent,under 2 percent (continuous soybean),after 17 years,SUMMARY-README s5 (AAFC Harrow; Drury),Rise in soil organic carbon
-continuous corn (fertilized),corn,112,bu/ac,,2016 to 2020,SUMMARY-README s5 (AAFC Harrow; Drury),
-rotation corn (fertilized),corn,188,bu/ac,,2016 to 2020,SUMMARY-README s5 (AAFC Harrow; Drury),Which rotation is not stated in the docs
-rotation corn (fertilized),corn,68,percent,continuous corn (fertilized),2016 to 2020,SUMMARY-README s5 (AAFC Harrow; Drury),
-continuous corn (unfertilized),corn,17,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),Period not stated for this row
-11 North American trials (347 site-years),corn,28,percent,,over time,SUMMARY-README s5 (not Harrow only),Diverse rotations vs simple. Average corn yield gain across conditions
-11 North American trials (347 site-years),corn,14 to 90,percent,simple rotation,drought years,SUMMARY-README s5 (not Harrow only),Corn yield gain in diverse rotation in drought years
+rotation,crop,value,unit,baseline,period,source,note,verification,label
+continuous soybean,soybean,41,bu/ac,,5-year average reported in April 2021; calendar years not specified,https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans,"Firsthand Craig Drury interview transcript. Historical reference, not a prediction.",VERIFIED,CACHED
+soy-soy-wheat,soybean,53,bu/ac,,5-year average reported in April 2021; calendar years not specified,https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans,"Firsthand Craig Drury interview transcript. Historical reference, not a prediction.",VERIFIED,CACHED
+soy-soy-wheat,soybean,30,percent,continuous soybean,5-year average reported in April 2021,https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans,Approximate interview gain. Do not substitute for exact ratios computed from rounded yields.,VERIFIED,CACHED
+corn-soy-wheat,soybean,64,bu/ac,,5-year average reported in April 2021; calendar years not specified,https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans,"Firsthand Craig Drury interview transcript. Historical reference, not a prediction.",VERIFIED,CACHED
+corn-soy-wheat,soybean,50,percent,continuous soybean,5-year average reported in April 2021,https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans,Approximate interview gain. Do not substitute for exact ratios computed from rounded yields.,VERIFIED,CACHED
+continuous corn,corn,118,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),"Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+corn-soy,UNVERIFIED,154,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),"Crop for this number is not stated in the docs; Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+corn-soy-wheat plus red clover,corn,169,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),"Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+corn-soy-wheat plus red clover,corn,43,percent,continuous corn,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),"Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+corn-soy-wheat (with and without red clover),corn,38 to 42,percent,monoculture corn,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),"Corn grain yield gain in 3-year rotation; Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+corn-soy-wheat,soybean,51 to 54,percent,monoculture soybean,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),"Soy yield gain in same 3-year rotation; Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+continuous soybean,soil organic carbon,under 2,percent,,UNVERIFIED,https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans,Firsthand Drury interview comparison after 17 years. Not a forecast or a score penalty.,VERIFIED,CACHED
+corn-soy-wheat,soil organic carbon,2.25,percent,,after 17 years,https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans,Firsthand Drury interview comparison after 17 years. Not a forecast or a score penalty.,VERIFIED,CACHED
+corn-soy-wheat,soil organic carbon,16,percent,under 2 percent (continuous soybean),after 17 years,https://www.realagriculture.com/2021/04/soybean-school-should-you-plant-more-soybeans,Firsthand Drury interview comparison after 17 years. Not a forecast or a score penalty.,VERIFIED,CACHED
+continuous corn (fertilized),corn,112,bu/ac,,2016 to 2020,SUMMARY-README s5 (AAFC Harrow; Drury),"Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+rotation corn (fertilized),corn,188,bu/ac,,2016 to 2020,SUMMARY-README s5 (AAFC Harrow; Drury),"Which rotation is not stated in the docs; Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+rotation corn (fertilized),corn,68,percent,continuous corn (fertilized),2016 to 2020,SUMMARY-README s5 (AAFC Harrow; Drury),"Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+continuous corn (unfertilized),corn,17,bu/ac,,UNVERIFIED,SUMMARY-README s5 (AAFC Harrow; Drury),"Period not stated for this row; Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+11 North American trials (347 site-years),corn,28,percent,,over time,SUMMARY-README s5 (not Harrow only),"Diverse rotations vs simple. Average corn yield gain across conditions; Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
+11 North American trials (347 site-years),corn,14 to 90,percent,simple rotation,drought years,SUMMARY-README s5 (not Harrow only),"Corn yield gain in diverse rotation in drought years; Legacy planning claim, not eligible for numeric output until checked.",UNVERIFIED,CACHED
