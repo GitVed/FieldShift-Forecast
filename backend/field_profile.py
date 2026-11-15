@@ -73,14 +73,22 @@ def _over_years(series, years, months, how):
 # Crop calendar. Source: OMAFRA 2017, citation as supplied by the team.
 # The document link was not recorded, so it has not been checked here.
 CROP_CALENDAR = {
-    "source": "OMAFRA 2017 (citation as supplied; link not recorded, not checked)",
-    "corn": {"seeded": "May", "harvested": "late September to early November"},
-    "soybean": {"seeded": "May", "harvested": "late September to early November"},
-    "wheat": {"seeded": "late August to mid October, previous year",
-              "harvested": "late June to mid July"},
-    "note": ("May to September is the corn and soybean growing window only. Winter wheat is in the "
-             "ground over winter and out by July, which is why it fits a rotation and frees the "
-             "field for red clover."),
+    "source": ("OMAFRA Publication 811, Agronomy Guide for Field Crops (the 2017 guide the team called OMAFRA 2017), "
+               "chapters 1, 2 and 4; OMAFRA Field Crop Report, 14 Sept 2017"),
+    "corn": {"seeded": "late April and the first half of May (Pub 811 ch. 1)",
+             "harvested": "not found as a month in Pub 811"},
+    "soybean": {"seeded": "best before the middle of May (Pub 811 ch. 2)",
+                "harvested": "3 to 10 days after physiological maturity, mid September to early October in Pub 811 Table 2-5"},
+    "wheat": {"seeded": "optimum mid-October in southwestern Ontario (OMAFRA Field Crop Report, 14 Sept 2017); "
+                        "often set by when soybeans are harvested (Pub 811 ch. 4)",
+              "harvested": "not found as a month in Pub 811"},
+    "urls": ["https://www.ontario.ca/files/2022-10/omafra-agronomy-guide-for-field-crops-chapter-1-en-2022-10-13.pdf",
+             "https://www.ontario.ca/files/2022-10/omafra-agronomy-guide-for-field-crops-chapter-2-en-2022-10-13.pdf",
+             "https://www.ontario.ca/files/2022-10/omafra-agronomy-guide-for-field-crops-chapter-4-en-2022-10-13.pdf",
+             "https://fieldcropnews.com/?p=14180"],
+    "note": ("May to September is the corn and soybean window only. Winter wheat is sown in the fall after soybeans and "
+             "harvested the next summer, which is why it fits a rotation and leaves time for red clover. The wording "
+             "'late August to mid October' and 'late June to mid July' that the team supplied was not found in these sources."),
 }
 
 # Soil organic carbon. HWSD2 is a global model value; the trial is a local measurement.

@@ -7,12 +7,12 @@ passes query parameters; all filtering and ranking happens here.
 Nothing here predicts a dry-year yield. No source gives one for this field.
 The dry view uses two sourced things:
 - Measured 2012 stress: May-Sep rain against FAO crop water need (Model 1).
-- Bowles et al. 2020: in drought years, diverse rotations reduced maize yield
-  LOSSES by 14 to 90 percent versus simple rotations (11 North American
-  trials, not Harrow). We use the low end, 14. The numbers are read from the
-  trial CSV, not typed here.
-"Diverse" here means corn plus at least two other crop species. That cutoff is
-our reading of the study and is UNVERIFIED.
+- Bowles et al. 2020: in the worst drought years at US sites, maize yielded 14.0
+  to 88.9 percent more in more diverse rotations than in simpler ones (the
+  summary says losses were reduced 14.0 to 89.9 percent). Not Ontario. We use
+  the low end, 14. The numbers are read from the trial CSV, not typed here.
+"Diverse" here means corn plus at least two other crop species. That is our
+simplification; the study scores diversity with a rotation complexity index.
 """
 import csv
 import re
@@ -51,9 +51,11 @@ def drought_line(crops, evidence):
                 "text": "Simple rotation: no drought-year evidence of smaller losses."}
     return {"applies": True, "loss_reduction_low_pct": evidence["low_pct"],
             "range_pct": [evidence["low_pct"], evidence["high_pct"]],
-            "text": (f"Diverse rotation: drought-year maize losses {evidence['low_pct']:.0f} to "
-                     f"{evidence['high_pct']:.0f} percent smaller than simple rotations. We use the low end, "
-                     f"{evidence['low_pct']:.0f} percent. 11 North American trials, not Harrow."),
+            "text": (f"Diverse rotation: in the worst drought years at US trial sites, maize yielded "
+                     f"{evidence['low_pct']:g} to {evidence['high_pct']:g} percent more in more diverse rotations than in "
+                     f"simpler ones (Bowles et al. 2020). We use the low end, {evidence['low_pct']:g} percent. US sites only, "
+                     "not Ontario. The paper scores diversity by species, cover crops and rotation length; counting corn "
+                     "plus two other crops as diverse is our simplification."),
             "source": evidence["source"]}
 
 

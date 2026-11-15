@@ -140,7 +140,9 @@ class ApiTests(unittest.TestCase):
     def test_only_verified_yields_shown(self):
         with open(ROOT / "data" / "seed" / "harrow_trial_yields.csv", encoding="utf-8-sig", newline="") as f:
             verified = {float(r["value"]) for r in csv.DictReader(f)
-                        if r.get("verification") in ("VERIFIED", "DERIVED") and r["unit"] == "bu/ac"}
+                        if r.get("verification") in ("VERIFIED", "DERIVED", "LONGTERM") and r["unit"] == "bu/ac"}
+        with open(ROOT / "data" / "seed" / "regional_yields.csv", encoding="utf-8", newline="") as f:
+            verified |= {float(r["bu_ac"]) for r in csv.DictReader(f) if r["verification"] == "VERIFIED"}
         j = self.c.get("/api/rotation/harrow").json()
         shown = [y["bu_ac"] for rot in j["rotations"] for y in rot["yields"]] + \
                 [y["bu_ac"] for y in j["baseline"]["yields"]]
@@ -164,12 +166,15 @@ class ApiTests(unittest.TestCase):
         self.assertIn("2.25", rots["corn-soy-wheat"]["soil"])    # soil is its own line
         self.assertEqual(rots["corn-soy"]["soil"], "not available")
 
-    def test_wheat_yield_never_invented(self):
+    def test_wheat_only_from_sources(self):
         j = self.c.get("/api/rotation/harrow?must_grow=wheat&need_bu=70").json()
         self.assertTrue(j["rotations"])
         for r in j["rotations"]:
-            self.assertTrue(all(y["bu_ac"] is None for y in r["yields"] if y["crop"] == "Wheat"))
-            self.assertIsNone(r["quantity"]["meets"])
+            for y in r["yields"]:
+                if y["crop"].startswith("Wheat"):
+                    self.assertIn(y["evidence"], ("trial_longterm", "regional", "none"))
+            self.assertIn(r["quantity"]["evidence"], ("trial_longterm", "regional"))
+        self.assertEqual(j["regional_yields"]["wheat"]["value"], 96.9)   # Essex 2025, shown separately
 
     def test_must_grow_filters_and_corn_alias(self):
         a = self.c.get("/api/rotation/harrow?must_grow=maize").json()
@@ -201,8 +206,9 @@ class ApiTests(unittest.TestCase):
     def test_soybean_pick_ranks_by_soybean_yield(self):
         rots = self.c.get("/api/rotation/harrow?must_grow=soybean").json()["rotations"]
         ids = [r["id"] for r in rots]
-        self.assertEqual(ids[:2], ["corn-soy-wheat", "soy-soy-wheat"])         # 64 then 53
-        self.assertTrue(all(r["picked_crop_evidence"] != "trial" for r in rots[2:]))
+        # 5-year trial 64, 53 first; then long-term trial only 50.6 (clover) and 49.1 (corn-soy)
+        self.assertEqual(ids, ["corn-soy-wheat", "soy-soy-wheat", "corn-soy-wheat-clover", "corn-soy"])
+        self.assertEqual([r["picked_crop_yield_bu_ac"] for r in rots], [64.0, 53.0, 50.6, 49.1])
 
     def test_every_rotation_number_has_a_calculation(self):
         j = self.c.get("/api/rotation/harrow?must_grow=maize&need_bu=160").json()
@@ -223,6 +229,22 @@ class ApiTests(unittest.TestCase):
     def test_detect_reports_data_quality(self):
         dq = self.c.get("/api/detect/harrow").json()["data_quality"]["files"]
         self.assertEqual(dq["power_t2m_harrow_1981_2025.csv"]["usable_rows"], 540)
+
+    def test_quantity_shows_both_trial_figures(self):
+        r = {x["id"]: x for x in self.c.get("/api/rotation/harrow?must_grow=soybean&need_bu=60").json()["rotations"]}
+        q = r["corn-soy-wheat"]["quantity"]
+        self.assertIsNone(q["meets"])                  # 64 meets, long-term 52.0 does not
+        self.assertEqual([c["bu_ac"] for c in q["checks"]], [64.0, 52.0])
+
+    def test_revenue_has_its_arithmetic(self):
+        r = self.c.get("/api/rotation/harrow").json()["rotations"][0]
+        self.assertTrue(r["revenue"].endswith("CAD/ac/yr gross"))
+        self.assertIn("divided by 3 years", r["revenue_calc"])
+
+    def test_bowles_wording_is_us_only(self):
+        t = self.c.get("/api/rotation/harrow").json()["rotations"][0]["dry"]["drought"]["text"]
+        self.assertIn("US sites only", t)
+        self.assertIn("88.9", t)
 
     def test_bad_inputs(self):
         self.assertEqual(self.c.get("/api/rotation/nope").status_code, 404)

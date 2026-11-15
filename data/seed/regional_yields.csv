@@ -1,0 +1,3 @@
+crop,geography,year,bu_ac,unit_as_published,source,note,calc,verification
+wheat,"Essex County, Ontario",2025,96.9,"Yield (bushels/acre), stored 96.868872909418329",https://data.ontario.ca/dataset/e30dc044-5f75-4f33-b63e-6326f8769bea/resource/5af26019-30c2-4c97-b7bb-803817a3469c/download/ctywwheat.xlsx,"OMAFA county estimates, sheet wheat2025, row Essex. Regional average, not a trial yield. Used for quantity and revenue only.","96.9 bu/ac as published (Essex, 2025)",VERIFIED
+wheat,Ontario,2025,97.4,Average yield (bushels per acre),https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3210035901,"Statistics Canada 32-10-0359-01, winter wheat remaining. Context only; Essex is used.",97.4 bu/ac as published,CONTEXT

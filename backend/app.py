@@ -292,81 +292,117 @@ def regional_yields():
     return out
 
 
+@functools.lru_cache(maxsize=1)
+def longterm_yields():
+    """Long-term trial averages (Agomoh et al. 2020 and 2021), converted to bu/ac.
+    Shown beside the 5-year figures; never mixed into the trial yield index."""
+    out = {}
+    with open(SEED / "harrow_trial_yields.csv", encoding="utf-8-sig", newline="") as f:
+        for r in csv.DictReader(f):
+            if r.get("verification") == "LONGTERM" and r.get("unit") == "bu/ac":
+                out[(r["rotation"], r["crop"])] = {"value": float(r["value"]), "source": r["source"],
+                                                   "period": r["period"], "calc": r["note"]}
+    return out
+
+
+def _evidence(crop, result, regional):
+    """Every yield we have for one crop in one rotation, best first:
+    5-year trial, long-term trial, then regional average."""
+    out = []
+    ref = (result.get("yield_references") or {}).get(crop)
+    if ref:
+        out.append({"value": ref["value"], "kind": "trial", "label": "trial",
+                    "status": "DERIVED" if ref.get("verification") == "DERIVED" else "SOURCED",
+                    "source": f"{ref['source']} ({_period(ref['period'])})",
+                    "calc": ref["note"] if ref.get("verification") == "DERIVED"
+                    else f"{ref['value']:g} bu/ac as stated in the source"})
+    lt = longterm_yields().get((result["name"], crop))
+    if lt:
+        out.append({"value": lt["value"], "kind": "trial_longterm", "label": "long-term trial",
+                    "status": "SOURCED", "source": f"{lt['source']} ({lt['period']})", "calc": lt["calc"]})
+    reg = regional.get(crop)
+    if reg:
+        out.append({"value": reg["value"], "kind": "regional", "label": "regional average",
+                    "status": "REGIONAL", "source": f"{reg['source']} ({reg['geography']}, {reg['year']})",
+                    "calc": reg["calc"] or f"{reg['value']:g} bu/ac as published"})
+    return out
+
+
 def _yields(result, regional):
     out = []
+    names = {"trial": "", "trial_longterm": " (long-term trial average)", "regional": " (regional average, not trial)"}
     for crop in dict.fromkeys(result["crops"]):
-        ref = (result.get("yield_references") or {}).get(crop)
-        if ref:
-            derived = ref.get("verification") == "DERIVED"
-            calc = (ref["note"] if derived else f"{ref['value']:g} bu/ac as stated in the source")
-            out.append({"crop": CROP_DISPLAY[crop], "bu_ac": ref["value"],
-                        "status": "DERIVED" if derived else "SOURCED", "storage": "CACHED",
-                        "evidence": "trial", "source": f"{ref['source']} ({_period(ref['period'])})",
-                        "calc": calc})
-        else:
+        ev = _evidence(crop, result, regional)
+        if not any(e["kind"] != "regional" for e in ev):
             out.append({"crop": CROP_DISPLAY[crop], "bu_ac": None, "status": "MISSING", "storage": "CACHED",
                         "evidence": "none", "source": "No trial yield for this crop in this rotation",
                         "calc": "Not available, not estimated"})
-            reg = regional.get(crop)
-            if reg:
-                out.append({"crop": f"{CROP_DISPLAY[crop]} (regional average, not trial)", "bu_ac": reg["value"],
-                            "status": "REGIONAL", "storage": "CACHED", "evidence": "regional",
-                            "source": f"{reg['source']} ({reg['geography']}, {reg['year']})",
-                            "calc": reg["calc"] or f"{reg['value']:g} bu/ac as published"})
+        for e in ev:
+            out.append({"crop": CROP_DISPLAY[crop] + names[e["kind"]], "bu_ac": e["value"], "status": e["status"],
+                        "storage": "CACHED", "evidence": e["kind"], "source": e["source"], "calc": e["calc"]})
     return out
 
 
 def _yield_for(crop, result, regional):
-    ref = (result.get("yield_references") or {}).get(crop)
-    if ref:
-        return ref["value"], "trial"
-    if crop in regional:
-        return regional[crop]["value"], "regional"
-    return None, None
+    """Best single yield for ranking and revenue: trial, then long-term trial, then regional."""
+    ev = _evidence(crop, result, regional)
+    return (ev[0]["value"], ev[0]["kind"]) if ev else (None, None)
 
 
 def _revenue(result, regional, prices):
-    """Gross revenue per acre per year over the rotation. Needs a yield (trial or
-    regional) and a dated price for every crop year. Otherwise not available."""
+    """Gross revenue per acre per year over the rotation. Needs a yield and a dated
+    price for every crop year. Uses the best available yield for each crop."""
     crops = result["crops"]
-    parts, used_regional = [], False
+    parts, kinds = [], set()
     for crop in crops:
         y, kind = _yield_for(crop, result, regional)
         if y is None or crop not in prices:
             return None, f"not available: no yield for {CROP_DISPLAY[crop].lower()} in this rotation"
-        used_regional |= kind == "regional"
+        kinds.add(kind)
         parts.append((crop, y, prices[crop]["value"]))
     total = sum(y * p for _, y, p in parts) / len(crops)
-    calc = " + ".join(f"{y:g} x {p:.2f}" for _, y, p in parts) + f", divided by {len(crops)} years = {total:.0f} CAD/ac/yr"
-    note = " Uses a regional wheat average, not a trial yield." if used_regional else ""
-    return f"{total:.0f} CAD/ac/yr gross{' (regional wheat)' if used_regional else ''}", calc + "." + note
+    calc = " + ".join(f"{CROP_DISPLAY[c]} {y:g} x {p:.2f}" for c, y, p in parts) + \
+        f", divided by {len(crops)} years = {total:.0f} CAD/ac/yr."
+    notes = {"trial_longterm": " Uses a long-term trial average for at least one crop.",
+             "regional": " Uses a regional average (not a trial yield) for at least one crop."}
+    return f"{total:.0f} CAD/ac/yr gross", calc + "".join(notes[k] for k in sorted(kinds) if k in notes)
 
 
 def _quantity(crop, need_bu, result, regional):
     if crop is None or need_bu is None:
         return None
-    y, kind = _yield_for(crop, result, regional)
-    years = result["crops"].count(crop)
-    total_years = len(result["crops"])
     name = stress.MODEL2_TO_API[crop]
-    if y is None:
+    ev = _evidence(crop, result, regional)
+    trial = [e for e in ev if e["kind"] != "regional"]
+    use = trial or ev
+    years, total_years = result["crops"].count(crop), len(result["crops"])
+    if not use:
         return {"crop": name, "need_bu_ac": need_bu, "trial_bu_ac": None, "meets": None, "shortfall_bu_ac": None,
                 "evidence": "none", "text": "not available: no yield for this crop in this rotation",
                 "calc": "Not available, not estimated"}
-    meets = y >= need_bu
-    per_year = y * years / total_years
-    label = "trial" if kind == "trial" else "regional average"
-    return {"crop": name, "need_bu_ac": need_bu, "trial_bu_ac": y if kind == "trial" else None,
-            "regional_bu_ac": y if kind == "regional" else None, "meets": meets,
-            "shortfall_bu_ac": None if meets else round(need_bu - y, 1), "evidence": kind,
+    checks = []
+    for e in use:
+        ok = e["value"] >= need_bu
+        checks.append({"label": e["label"], "bu_ac": e["value"], "meets": ok,
+                       "shortfall_bu_ac": None if ok else round(need_bu - e["value"], 1),
+                       "per_year_average_bu_ac": round(e["value"] * years / total_years, 1)})
+    meets = True if all(c["meets"] for c in checks) else False if not any(c["meets"] for c in checks) else None
+    text = "; ".join((f"{c['label']} {c['bu_ac']:g} bu/ac meets {need_bu:g}" if c["meets"]
+                      else f"{c['label']} {c['bu_ac']:g} bu/ac, short by {c['shortfall_bu_ac']:g}") for c in checks)
+    verdict = "Yes" if meets else "No" if meets is False else "Depends on the figure"
+    first = checks[0]
+    return {"crop": name, "need_bu_ac": need_bu, "meets": meets, "checks": checks,
+            "trial_bu_ac": first["bu_ac"] if trial else None,
+            "regional_bu_ac": None if trial else first["bu_ac"],
+            "shortfall_bu_ac": first["shortfall_bu_ac"], "evidence": use[0]["kind"],
             "crop_years": f"{years} of {total_years}",
-            "per_year_average_bu_ac": round(per_year, 1),
-            "text": (f"Yes: {label} yield {y:g} bu/ac meets {need_bu:g}" if meets
-                     else f"No: {label} yield {y:g} bu/ac, short by {need_bu - y:g} bu/ac"),
-            "calc": (f"{y:g} {'>=' if meets else '<'} {need_bu:g}. This is per acre in a year you grow "
-                     f"{name} ({years} of {total_years} years). Averaged over every year of the rotation: "
-                     f"{y:g} x {years}/{total_years} = {per_year:.1f} bu/ac/yr. Normal-year {label} figure, "
-                     "not a drought yield.")}
+            "per_year_average_bu_ac": first["per_year_average_bu_ac"],
+            "text": f"{verdict}: {text}",
+            "calc": (" ; ".join(f"{c['bu_ac']:g} {'>=' if c['meets'] else '<'} {need_bu:g}" for c in checks)
+                     + f". Per acre in a year you grow {name} ({years} of {total_years} years). Averaged over every "
+                     f"year of the rotation: " + ", ".join(f"{c['bu_ac']:g} x {years}/{total_years} = "
+                                                          f"{c['per_year_average_bu_ac']:g}" for c in checks)
+                     + " bu/ac/yr. Normal-year averages, not drought yields.")}
 
 
 def _score_calc(result):
@@ -434,7 +470,8 @@ def rotation_scores(field_id: str, scenario: str = Query("normal"),
         if must_grow and (crop is None or crop not in res["crops"]):
             continue
         revenue, revenue_calc = _revenue(res, regional, prices)
-        picked_yield, picked_kind = _yield_for(crop, res, regional) if crop else (None, None)
+        picked = [e for e in _evidence(crop, res, regional) if e["kind"] != "regional"] if crop else []
+        picked_yield, picked_kind = (picked[0]["value"], "trial") if picked else (None, None)
         rotations.append({
             "id": rid, "name": display, "crops": crops,
             "rank": None, "score": res["overall_percent"],
