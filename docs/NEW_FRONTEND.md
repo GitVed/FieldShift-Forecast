@@ -6,7 +6,7 @@ The dashboard opens at `/`, with Recommendations and Priority tabs. Each shows o
 
 ## Run locally
 
-From the main project directory, with Python 3.9+:
+From the main project directory, with Python 3.11:
 
 ```bash
 python3 -m venv .venv

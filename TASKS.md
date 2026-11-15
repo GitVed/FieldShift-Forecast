@@ -10,7 +10,7 @@ Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we wo
 
 Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 109 tests pass. It is not on main yet.
 
-Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/frontend/?api=1
+Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/. Tests: `pip install -r requirements-dev.txt`, then `python -m pytest -q`
 
 **Done**
 - Dev's cached POWER, GLDAS, IMERG and HWSD2 data, trend engine, SQLite cache. Windows path fix and `harrow-power` alias added during the merge

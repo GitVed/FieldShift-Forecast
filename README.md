@@ -454,7 +454,7 @@ General Space Apps judging: Impact, Creativity, Validity, Relevance, Presentatio
 
 ### Prerequisites
 
-- Python 3.11 or later
+- Python 3.11 (tested; Docker uses 3.11)
 - Docker, optional, only for PostgreSQL
 - Kaggle, Earthdata and Copernicus accounts are only needed to refetch data. The cached data is in the repo
 
@@ -465,7 +465,7 @@ git clone https://github.com/GitVed/Tuxedo.git
 cd Tuxedo
 pip install -r requirements.txt
 python -m uvicorn backend.app:app --port 8765
-# Open http://localhost:8765/frontend/?api=1
+# Open http://localhost:8765/
 # The SQLite cache builds itself on first start. No live API calls.
 ```
 
@@ -478,6 +478,7 @@ Climate yield check (DERIVED). Essex County yields 1981-2025 were fitted against
 ### Tests
 
 ```bash
+pip install -r requirements-dev.txt
 python -m pytest tests
 ```
 

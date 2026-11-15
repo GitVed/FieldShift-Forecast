@@ -2,6 +2,5 @@
 .venv
 .cache
 data/raw
-data/source
 tests
 notebooks

@@ -1,4 +1,4 @@
-# Stage 1 data processing; Python 3.9+.
+# Runtime. Python 3.11 (tested; the Dockerfile uses python:3.11-slim). Tests: requirements-dev.txt.
 numpy==2.0.2
 netCDF4==1.7.2
 rasterio==1.4.3
@@ -11,4 +11,3 @@ fastapi==0.115.14
 pydantic==2.13.5
 uvicorn==0.34.3
 httpx==0.28.1
-pytest==9.2.0
