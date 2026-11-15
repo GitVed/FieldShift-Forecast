@@ -249,7 +249,10 @@ def rank_annual_options(rows,crop_sequences,selected,baseline,soil):
         # excess rain. Unassessed wheat is never treated as a zero-water crop.
         # A tie on the picked crop (wheat 62.5 in both corn-soy-wheat rotations, the same
         # 4.2 t/ha in Agomoh et al. 2020) is broken by the trial score of the whole rotation.
-        key=(target_group,target_gap,-(trial if trial is not None else -1),-(row['score'] if row['score'] is not None else -1),ph_failures,
+        # Exact ties only (no invented closeness threshold): this year's rain fit, then the
+        # midpoint of the DERIVED corn climate range in projected years, then the trial score.
+        adj=row.get('climate_adjustment');corn_mid=((adj['low_bu_ac']+adj['high_bu_ac'])/2) if adj else -1
+        key=(target_group,target_gap,-(trial if trial is not None else -1),-(rain_fit if rain_fit is not None else -1),-corn_mid,-(row['score'] if row['score'] is not None else -1),ph_failures,
              -(rain_fit if rain_fit is not None else -1),-resilience,-gaez_fit,row['id'])
         keys[row['id']]=key
         row['planning_score']=round(rain_fit,1) if rain_fit is not None else None
@@ -354,7 +357,7 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
             same=[r for r in rows if r is not row and r.get('picked_crop_yield_bu_ac')==row['picked_crop_yield_bu_ac']]
             if same:
                 row['tie_note']=(f"Tie on {label}: {row['picked_crop_yield_bu_ac']:g} bu/ac here and in "
-                                 +', '.join(r['name'] for r in same)+". Same trial figure, so the order between them follows the trial score of the whole rotation.")
+                                 +', '.join(r['name'] for r in same)+". Same trial figure, so the tie is broken by this year’s rain check, then the corn climate range from 2026, then the trial score of the whole rotation.")
     # Corn target against the DERIVED climate range for a projected year (P2 corn model, unchanged).
     for row in rows:
         q=row.get('quantity');adj=row.get('climate_adjustment')
