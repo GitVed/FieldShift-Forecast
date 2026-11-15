@@ -6,7 +6,7 @@
 **Challenge:** Field Shift: Adapting Farms with NASA Data
 **Event:** NASA Space Apps Toronto, Nov 14-15, 2026, Bombardier Centre, Centennial College Downsview, 65 Carl Hall Rd, Toronto, ON M3K 2C1
 **Team:** Vedant Soni (owner), Ved Patel, Shlok Mehta, Dev Patel
-**Stack:** Python, FastAPI, PostgreSQL, Docker, JavaScript, Leaflet
+**Stack:** Python, FastAPI, SQLite (PostgreSQL optional with Docker), JavaScript, Leaflet
 **Submission deadline:** Sunday Nov 15, 2026, 11:59 PM EST
 **Presentations and local judging:** Sunday Nov 15, 1:00 PM to 4:00 PM, closing ceremony 4:00 PM to 6:00 PM
 
@@ -137,7 +137,7 @@ Real numbers used, do not invent others:
 
 Use: yield anchor. Anchor to Harrow trial bushels for each rotation, then adjust with NASA climate trend for that field. Show the trial source under every yield number.
 
-### 4.3 Avenue 2, SoilGrids WCS, soil layer
+### 4.3 SoilGrids WCS, soil layer
 
 Source: ISRIC SoilGrids, global, 250 m resolution, 6 depth intervals, 0 to 5, 5 to 15, 15 to 30, 30 to 60, 60 to 100, 100 to 200 cm.
 
@@ -150,7 +150,7 @@ REST API vs WCS:
 
 Use: pre-fetch WCS once, in the first hour, for a small Harrow bounding box, save as GeoTIFF / CSV in `data/seed/`, load into Postgres, demo reads from cache. Label it CACHED, modelled, not lab-measured. If WCS fails, fall back to Harrow trial soil, Brookston clay loam, which is ground truth for that site. Never call WCS live during judging.
 
-### 4.4 Avenue 3, US Corn Belt, SSURGO plus NASS, backup only
+### 4.4 US Corn Belt, SSURGO plus NASS, Avenue 2 branch only
 
 Do not switch to this as the main pilot. Use only Sunday morning if time allows, to show the method works in two places.
 
@@ -170,7 +170,7 @@ https://www.kaggle.com/datasets/atharvaingle/crop-recommendation-dataset/data
 - Ranges: N 0 to 140, P 5 to 145, K 5 to 205, temp 8.8 to 43.7 C, humidity 14.3 to 99.98 percent, pH 3.5 to 9.9, rainfall 20.2 to 298.6 mm
 - Papers using it get Random Forest 93.71 percent accuracy on 22 crops
 
-Use: learn the rules, wheat is good when temp is X, rainfall is Y, pH is Z, N/P/K is, and so on. Do not use for Ontario bushels. It is mostly India / tropical crops, plus maize and wheat. It is a suitability classifier, not a Harrow yield dataset.
+Use: learn the rules, wheat is good when temp is X, rainfall is Y, pH is Z, N/P/K is, and so on. Do not use for Ontario bushels. It is mostly India / tropical crops. It has maize but no wheat and no soybean. It is a suitability classifier, not a Harrow yield dataset.
 
 **Smart Farming Data 2024, SF24**
 - 2,200 records, 23 attributes, 22 crop classes
@@ -182,7 +182,7 @@ Use: richer training set for Step 1, soil plus climate plus temp, all variables 
 - 998,227 rows, 10 attributes, region, soil type, crop, weather, temperature, irrigation, rainfall, yield in tons per hectare
 - Use: learn yield vs temp / rain / soil, as a regression check, not as Ontario ground truth
 
-Download all three now, they are under 5 MB total. That is the training set, not a 1 GB download.
+The two small sets are in `data/seed/`. The Crop Yield set has 998,227 rows, so it stays in `data/raw/` and is not shipped.
 
 ### 4.6 ESA / Copernicus, field-level vegetation and land
 
@@ -212,7 +212,7 @@ https://browser.dataspace.copernicus.eu/
 - Use ERA5-Land as a cross-check to NASA POWER, especially for soil water 0 to 100 cm, which POWER does not give directly
 
 **FAO GAEZ v5**
-- FAO / IIASA, suitability index at 1 km, for rice, maize, cassava, soybean, and others, irrigated and rain-fed scenarios
+- FAO / IIASA, suitability index, fetched at 5 arc-minutes (about 9 to 10 km), for rice, maize, cassava, soybean, and others, irrigated and rain-fed scenarios
 - Use: suitability percent per crop, per place, e.g. maize suitability 78 percent in this cell under rain-fed, 62 percent under warming. That is literally a percent good score per crop, the starting point for the rotation scorer, before adjusting with Harrow trial data.
 
 ### 4.7 Prices and costs
@@ -225,45 +225,41 @@ https://browser.dataspace.copernicus.eu/
 
 ## 5. The model, two steps
 
-### Step 1, predict field conditions
+### Model 1, field conditions and crop suitability
 
-Inputs, all from downloaded files, no live API in demo:
+Inputs, all from cached files. No live API in the demo.
 
-- Soil: SoilGrids WCS, sand / silt / clay, pH, SOC, CEC, N, plus Kaggle N / P / K ranges
-- Climate: NASA POWER T2M, precip, humidity, radiation, plus ERA5-Land soil water 0 to 100 cm
-- Vegetation: Sentinel-2 NDVI / NDMI time series, MODIS NDVI as backup
-- Terrain: SRTM / Copernicus DEM slope
+- Climate: NASA POWER monthly temperature, rain and humidity, 1981 to 2025. The pilot point falls in the POWER cell centred 42.0, -83.125
+- Soil moisture: GLDAS Noah, 0.25 degree, four layers, 2000 to 2025
+- Soil: HWSD2 regional estimate for the top 20 cm. pH 6.7, sand 31, silt 41, clay 28 percent. SoilGrids returned no valid values at this point
+- Suitability: FAO GAEZ v5 Suitability Index, rain-fed, high input
 
-Train a simple Random Forest on Kaggle Crop Recommendation plus SF24 data to learn: given N, P, K, temp, humidity, pH, rainfall, soil moisture, what crop is suitable.
+Scores are 0 to 100 on the GAEZ Suitability Index. They are not a percent chance.
 
-Output Step 1: a field profile, and a suitability percent per crop.
+| Crop | Normal (GAEZ 2001-2020) | 2035 view (GAEZ 2021-2040, SSP370) |
+|---|---|---|
+| Wheat | 97.9 | 97.9 |
+| Soybean | 53.7 | 62.6 |
+| Maize | 97.9 | 93.5 |
 
-Example:
-- Wheat: 82 percent good here, because temp 18 C, rain 650 mm, pH 6.8 matches its ideal range from Kaggle plus GAEZ
-- Corn: 71 percent, because heat days are up
-- Soy: 88 percent, because soil moisture and temp fit, and soy fixes nitrogen
+The 2012 dry year keeps the baseline score, because no source gives a crop response for one dry season. It shows the measured stress instead. May to September rain was 317 mm against a 426 mm normal. It was 1.75 C warmer. July topsoil moisture was 0.314 against 0.348.
 
-### Step 2, predict rotation and why
+Checks shown beside each score, never blended into it:
+- Rain against FAO crop water need (FAO, Crop Water Needs, Table 5). In a normal year, May to September rain covers 53 to 85 percent of maize need. In 2012 it covers 40 to 63 percent
+- Soil pH against the OMAFRA target for fine-textured soils. 6.7 meets the wheat, soybean and corn targets
 
-Do not let the ML model invent rotation yield. Use research papers plus Harrow trial as the rotation rules.
+There is no Random Forest yet. Kaggle and SF24 have no wheat or soybean. They stay for maize and general rules later.
 
-Score per crop equals suitability percent from Step 1.
+### Model 2, rotations and why
 
-Rotation score equals average of crop scores, adjusted by rotation benefit from Harrow:
+Rule based. No ML yield predictor. Code is `backend/rotation.py`. Evidence is in `docs/EVIDENCE.md`.
 
-- Soy after corn: plus nitrogen fixation, plus soil benefit
-- Wheat after soy: breaks pest / disease cycle, plus soil
-- Corn after wheat plus red clover: plus 40 percent corn yield in trial, plus SOC
-- Continuous soy / continuous corn: minus penalty, soil depletion, SOC under 2 percent
+- Uses only verified trial yields with a source link. Verified so far are soybean yields: 41 bu/ac continuous, 53 in soy, soy, wheat, and 64 in corn, soy, wheat (Craig Drury interview, April 2021)
+- Corn and wheat yields are not verified yet. Those cards show "not available", never a guess
+- Prices are Grain Farmers of Ontario monthly averages for September 2026. Gross revenue is shown only when every crop yield in the rotation is verified. No profit, because costs are not verified
+- The overall rotation score stays pending. No source calibrates the rotation benefit or soil penalty weights
 
-Worked example:
-- Corn, soy, wheat: (71 + 88 + 82) / 3 = 80 percent, plus rotation bonus 12 percent = 92 percent overall, best
-- Corn, corn, soy: (71 + 71 + 88) / 3 = 77 percent, minus soil penalty 10 percent = 67 percent overall
-- Continuous soy: 88 percent, minus 50 percent penalty = 38 percent overall
-
-Show the breakdown in the demo: wheat is 82 percent good here because temp, rain, pH match, corn is 71 percent because heat days are up, overall rotation is 92 percent because wheat plus soy fix soil and break pests, and Harrow trial shows plus 50 percent soy yield in that rotation.
-
-That is explainable, auditable, and judges can check every percent against a dataset or a paper.
+The formula is unchanged: overall score = average suitability + rotation benefit - soil penalty. The 12, 10 and 50 point examples in early drafts were SAMPLE only and are not used.
 
 ---
 
@@ -272,54 +268,47 @@ That is explainable, auditable, and judges can check every percent against a dat
 ```
 FieldShift Forecast
 ├── data/
-│   ├── seed/                 # Pre-fetched, cached data, shipped with repo
-│   │   ├── power_t2m_harrow_1981_2025.csv
-│   │   ├── power_precip_harrow_1981_2025.csv
-│   │   ├── smap_soil_moisture_harrow.csv
-│   │   ├── modis_ndvi_harrow.csv
-│   │   ├── sentinel2_ndvi_harrow.csv      # Derived, field mean per date, few MB
-│   │   ├── soilgrids_harrow.csv           # WCS derived, texture, pH, SOC
-│   │   ├── harrow_trial_yields.csv        # Hand-built from AAFC trial
-│   │   ├── kaggle_crop_recommendation.csv # 2,200 rows, 150 kB
-│   │   ├── sf24_smart_farming.csv         # 2,200 rows, 23 cols
-│   │   └── sources.json                    # Request URL, retrieval time, units, coordinates, grid cell
-│   └── raw/                  # 1 GB Sentinel-2 tiles, git-ignored, do not ship
+│   ├── seed/                 # Cached data, shipped with the repo
+│   │   ├── power_*_harrow_1981_2025.csv   # POWER temperature, rain, humidity (Dev)
+│   │   ├── power_*_north_1981_2025.csv    # Buddy cell 0.5 degrees north (Dev)
+│   │   ├── gldas_soil_moisture_harrow.csv # GLDAS, four layers (Dev)
+│   │   ├── imerg_precip_harrow.csv        # IMERG rain cross-check (Dev)
+│   │   ├── hwsd_soil_harrow.csv           # HWSD2 regional soil (Dev)
+│   │   ├── soilgrids_harrow.csv           # All rows invalid at this point (Dev)
+│   │   ├── trend_results.csv              # Mann-Kendall and Sen slope (Dev)
+│   │   ├── sources.csv                    # Dev's provenance manifest
+│   │   ├── gaez_harrow.csv                # GAEZ v5, three periods (Ved)
+│   │   ├── kaggle_crop_recommendation.csv # 2,200 rows (Ved)
+│   │   ├── sf24_smart_farming.csv         # 2,200 rows, 23 columns (Ved)
+│   │   ├── model1_sources.json            # Sources for Ved's files
+│   │   ├── harrow_trial_yields.csv        # Trial claims with verification column (Vedant)
+│   │   └── model2_prices.json             # Dated GFO prices (Vedant)
+│   └── raw/                  # Big downloads, git-ignored
 ├── backend/
-│   ├── app.py                # FastAPI entrypoint
-│   ├── trend.py              # Mann-Kendall, Sen's slope, buddy check
-│   ├── suitability.py        # Random Forest, Kaggle + SF24, GAEZ
-│   ├── rotation.py           # Rotation scorer, Harrow multipliers, profit
-│   └── db.py                 # Postgres models
-├── frontend/
-│   ├── index.html            # Leaflet map, Detect / Predict / Plan screens
-│   ├── map.js                # Layers: harrow-field, trend-grid-cell, north-comparison-cell
-│   └── style.css
-├── notebooks/
-│   ├── 01_power_fetch.ipynb
-│   ├── 02_soilgrids_wcs.ipynb
-│   ├── 03_sentinel2_ndvi.ipynb
-│   └── 04_train_suitability.ipynb
-├── docker-compose.yml
-├── requirements.txt
-└── README.md
+│   ├── app.py                # FastAPI entrypoint, serves the frontend too
+│   ├── field_profile.py      # Harrow profile and scenarios from cached CSVs
+│   ├── suitability.py        # Model 1, GAEZ index plus water and pH checks
+│   ├── rotation.py           # Model 2, evidence-gated rotation scorer
+│   ├── trend.py, seed.py, db.py, data_api.py   # Dev's trend engine and cache
+│   └── data_pipeline.py      # Dev's data processing
+├── frontend/                 # index.html, map.js, style.css, sample_data.json
+├── tests/                    # 59 tests
+├── docs/                     # EVIDENCE.md, MODEL2.md
+├── Dockerfile, docker-compose.yml   # Optional
+└── requirements.txt
 ```
 
 ### Backend, FastAPI
 
-- GET /api/pilot, returns pilot field, Harrow, coordinates, soil, baseline
-- GET /api/series/{cell_id}, returns monthly time series for a variable
-- GET /api/trend/{cell_id}, returns Sen's slope, Mann-Kendall p-value, confidence, buddy check
-- GET /api/rotation/{field_id}, returns 3 ranked rotations, with yield, revenue, soil, water, overall percent, and breakdown
-- POST /api/refresh, optional, promote refreshed cache only after validation
+- GET /api/pilot, pilot field, coordinates, soil, real POWER grid cells, trial site
+- GET /api/detect/{cell_id}, trend verdict for the Detect screen
+- GET /api/predict/{field_id}, normal, 2012 dry and 2035 dry scenarios
+- GET /api/rotation/{field_id}?scenario=, rotations with suitability, verified yields and revenue
+- GET /api/trend/{cell_id} and GET /api/series/{cell_id}, Dev's raw trend and monthly series
 
-### Database, Postgres
+### Database
 
-- data_sources, id, name, url, retrieved_at, units, licence
-- grid_cells, id, lat, lon, resolved_grid_lat, resolved_grid_lon, source
-- monthly_climate, cell_id, year, month, t2m, precip, humidity, radiation
-- soil_profiles, field_id, sand, silt, clay, ph, soc, cec, nitrogen, source
-- trend_runs, cell_id, variable, start_year, end_year, slope_per_decade, p_value, confidence, method
-- rotation_scores, field_id, rotation_name, crop_1, crop_2, crop_3, yield_bu_ac, revenue_per_ac, soil_score, water_score, overall_percent
+SQLite in `.cache/` by default, built from the cached CSVs on first start. PostgreSQL is optional with Docker. Tables: data_sources, grid_cells, monthly_climate, soil_profiles, trend_runs, rotation_scores.
 
 ### Frontend, Leaflet
 
@@ -364,35 +353,34 @@ Screens: Detect, Predict, Plan. Bundle demo geometry plus a lightweight basemap 
 
 ### Team roles
 
-- Vedant Soni, science and pitch, Harrow trial verification, demo narrative, submission
-- Ved Patel, data, POWER, SoilGrids, Sentinel-2, Postgres seed cache, trend engine
-- Dev Patel, backend and statistics, FastAPI, Mann-Kendall, suitability model, rotation scorer
-- Shlok Mehta, interface, Leaflet, Detect / Predict / Plan screens, demo flow
+Current owners and jobs are in TASKS.md. The plan above was the starting plan.
 
 ---
 
 ## 8. Demo script, 90 seconds
 
+Every claim below is produced by the current build. Check it again before the demo.
+
 **0 to 15 seconds, open**
-Toronto view, zoom to Harrow field. "This is a real farm field near Harrow, Ontario. This farmer has to choose a rotation that will still work in 2035."
+Toronto view, zoom to the Harrow area. "This farmer near Harrow, Ontario has to choose a rotation that will still work in 2035."
 
 **15 to 35 seconds, Detect**
-Click the field. Show trend verdict: "Summer temperature up, July soil moisture down, NDVI dropping in dry years. Here is the slope, the p-value, and the buddy check nearby. This is not one hot summer, it is a trend."
+"Temperature here is up 0.75 C per decade since 1981. The cell to the north agrees, and so does a 1991 start. Rainfall shows no clear trend, and July soil moisture is not significant yet. We say that too."
 
 **35 to 55 seconds, Predict**
-Show 2035 dry year. "In 2035, continuous corn collapses in a dry year. Corn, soy, wheat survives."
+"Replay 2012, a real dry year. Summer rain was 109 mm below normal and it was 1.75 C warmer. Rain covered only 40 to 63 percent of what corn needs. Add the warming trend for 2035 and it is 3.5 C above normal. FAO's own 2035 view lowers corn from 97.9 to 93.5."
 
 **55 to 75 seconds, Plan**
-Show 3 ranked rotations in bushels and profit. "Corn, soy, wheat: 64 bu/ac soy in trial, plus 50 percent over continuous soy, soil carbon up to 2.25 percent, overall 92 percent. Here is why, wheat is 82 percent good here, soy is 88 percent, corn is 71 percent, and the rotation fixes soil."
+"Here is the trial evidence. Soybeans grown after corn and wheat yielded 64 bu/ac, against 41 in continuous soy, in the AAFC Woodslee trial. Soil carbon reached 2.25 percent in that rotation after 17 years. Where we do not have a verified number, we show not available."
 
 **75 to 90 seconds, close**
-Read the evidence sentence. "A Harrow farmer using this rotation, based on 20 years of NASA data and 17 years of AAFC trial data, can expect higher yield in a dry year, healthier soil, and higher revenue. That is FieldShift Forecast."
+"We are not replacing your experience. We give you 45 years of measured change, a real dry-year replay, and trial evidence with a source under every number."
 
 ---
 
 ## 9. 30-second pitch
 
-A farmer near Harrow, Ontario has to pick a rotation that will work in 2035, not just last year. FieldShift Forecast proves how their field has already changed with NASA data, projects it to 2035, then recommends a rotation scored in real bushels, soil health, and profit, anchored to a 17-year AAFC trial at Harrow. Corn, soy, wheat, with red clover, is 92 percent overall, because it survives dry years and rebuilds soil. That is a plan a farmer can trust, and a farm their kids can still farm.
+A farmer near Harrow, Ontario has to pick a rotation that will work in 2035, not just last year. FieldShift Forecast shows how the area has already changed with NASA data, replays the 2012 drought, stress-tests 2035, and compares rotations using a long-term AAFC trial with a source under every number. That is evidence a farmer can check.
 
 ---
 
@@ -400,15 +388,16 @@ A farmer near Harrow, Ontario has to pick a rotation that will work in 2035, not
 
 Assumptions and limitations, to show in the demo and in the submission:
 
-- Harrow trial is one soil type, Brookston clay loam, at one site. Numbers are real for Harrow, not a yield promise for every farm in Ontario.
-- SoilGrids is modelled, R2 0.3 to 0.6, not lab-measured. Use it for texture and SOC, label it modelled.
-- SoilGrids REST API is paused. WCS was used as a pre-fetch, not a live call. Demo reads cache.
-- Kaggle Crop Recommendation and SF24 are mostly India / tropical crops, plus maize and wheat. They are used to learn suitability rules, not as Ontario yield truth. Harrow trial is the yield anchor.
-- GAEZ suitability is 1 km, not field-level. Use it as a baseline percent, then adjust with Harrow and Sentinel-2.
-- POWER grid is 0.5 degree lat by 0.625 degree lon. A Harrow point selects regional data, not a field microclimate. Sentinel-2 at 10 m is the field-level check.
-- Profit is an estimate. Revenue equals bushels times price, with price and date stated. Input costs are a stated assumption from OMAFRA budgets, or revenue only if costs are not verified.
-- 2035 projection is a trend stress test, not a weather forecast. Show uncertainty and range.
-- Hydrology Time Series Viewer was reported failing Nov 13 to 14, 2026, HTTP 500. We used Giovanni and POWER directly as a fallback.
+- The trial is at Woodslee, about 25 km from the pilot point and in a different POWER grid cell. Trial numbers are evidence for the area, not a yield promise for this field.
+- The pilot point and field polygon are not a confirmed farm field.
+- Soil is an HWSD2 regional estimate, not a field soil test. SoilGrids had no valid values at this point. HWSD2 shows about 6.6 percent organic carbon in the top 20 cm, while the trial reports 2 to 2.25 percent. This is unresolved.
+- Kaggle Crop Recommendation and SF24 are mostly India and tropical crops. They have maize but no wheat or soybean. They are not used for scores yet.
+- GAEZ is a 5 arc-minute grid, about 9 to 10 km, not field level. Its scores are a suitability index, not a percent.
+- POWER is a 0.5 by 0.625 degree grid. It describes the region, not a field microclimate.
+- The May to September window is an assumption. Winter wheat grows October to July, so its water check is not computed.
+- The 2035 view applies the measured temperature trend to 2012. Rain is not extrapolated because its trend is inconclusive. It is a stress test, not a forecast.
+- Corn and wheat trial yields are not verified yet. Revenue is gross, with a dated price. There is no profit figure.
+- Hydrology Time Series Viewer was reported failing Nov 13 to 14, 2026, HTTP 500. We used POWER and GLDAS directly.
 
 Future work, the limited-data framing:
 
@@ -440,40 +429,37 @@ General Space Apps judging: Impact, Creativity, Validity, Relevance, Presentatio
 ### Prerequisites
 
 - Python 3.11 or later
-- PostgreSQL 15 or later, or Docker
-- Node, optional, for frontend build
-- Kaggle account, for Crop Recommendation and SF24 CSVs, free
-- NASA Earthdata Login, for SMAP, GPM, MODIS pre-fetch, free
-- Copernicus Data Space Ecosystem account, for Sentinel-2, free
+- Docker, optional, only for PostgreSQL
+- Kaggle, Earthdata and Copernicus accounts are only needed to refetch data. The cached data is in the repo
 
 ### Quick start
 
 ```bash
-git clone https://github.com/vedantjsoni/NASA-Space-APPS.git
-cd NASA-Space-APPS
-cp .env.example .env
-docker compose up --build
-# Backend on http://localhost:8000
-# Frontend on http://localhost:3000
-# Postgres on localhost:5432
+git clone https://github.com/GitVed/Tuxedo.git
+cd Tuxedo
+pip install -r requirements.txt
+python -m uvicorn backend.app:app --port 8765
+# Open http://localhost:8765/frontend/?api=1
+# The SQLite cache builds itself on first start. No live API calls.
 ```
 
-### Seed data only, no live calls in demo
+Use any free port. On some machines port 8000 is already taken.
+
+### Tests
 
 ```bash
-python backend/seed.py
-# Loads data/seed/*.csv into Postgres
-# Verifies every file has a source in data/seed/sources.json
+python -m pytest tests
 ```
 
-### Train suitability model
+### Optional, PostgreSQL with Docker
 
 ```bash
-python notebooks/04_train_suitability.py
-# Trains Random Forest on Kaggle Crop Recommendation + SF24
-# Saves model to backend/models/suitability.pkl
-# Prints accuracy and feature importance
+POSTGRES_PASSWORD=choose-one docker compose up --build
 ```
+
+### Random Forest
+
+Not built. Kaggle and SF24 have no wheat or soybean. See TASKS.md.
 
 ---
 

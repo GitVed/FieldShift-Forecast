@@ -14,7 +14,7 @@ FieldShift Forecast, Team Tuxedo's NASA Space Apps Toronto 2026 entry. Harrow, O
 - Do not invent numbers, coordinates, prices, soil values, or dataset codes. If unsure, write UNVERIFIED and say how to check.
 - Label every number LIVE, CACHED, or SAMPLE. The demo reads cache and never calls an API live.
 - Model 2 is a transparent rule-based scorer, not an ML yield predictor.
-- Model 1 follows section 3b of SUMMARY-README.md. Never use Kaggle for wheat or soy. If a crop has no source, do not score it.
+- Model 1 follows sections 3b and 3c of SUMMARY-README.md. Never use Kaggle for wheat or soy. If a crop has no source, do not score it.
 - Do not reopen the Harrow-as-main decision.
 - Never push to main without the team. Avenue 2 stays on `avenue-2-global`.
 - Big raw downloads go in `data/raw/`, which is git-ignored.

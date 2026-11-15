@@ -2,7 +2,32 @@
 
 Team Tuxedo, FieldShift Forecast. You can skim this in 5 minutes.
 
-Last updated Sat Nov 14, 2 PM. Building closes 6 PM tonight. After that we work remote.
+Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we work remote.
+
+---
+
+## Status, Sat evening
+
+Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 59 tests pass. It is not on main yet.
+
+Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/frontend/?api=1
+
+**Done**
+- Dev's cached POWER, GLDAS, IMERG and HWSD2 data, trend engine, SQLite cache. Windows path fix and `harrow-power` alias added during the merge
+- Model 1 on real data, sourced only (SUMMARY-README 3c). Scenarios: 1991-2020 normal, 2012 dry, 2035 dry
+- Model 2 by Vedant, verified soybean yields, dated GFO prices
+- API: `/api/pilot`, `/api/detect`, `/api/predict`, `/api/rotation`, plus Dev's `/api/trend` and `/api/series`
+- Frontend wired to the API. Plan reloads per scenario. Real POWER cells and the trial site on the map
+- README demo script rewritten so every claim matches what the build produces
+
+**Still open, needs a person**
+1. Corn and wheat trial yields with a citable source. Without them most rotation cards show "not available"
+2. Rotation benefit and soil penalty weights with a source. Without them the overall score stays pending
+3. Soil carbon: HWSD2 shows about 6.6 percent, the trial shows 2 to 2.25 percent. Explain or pick one
+4. A crop calendar source for the May to September window
+5. A real field polygon, or keep the SAMPLE polygon and say so
+6. Pitch angle, slides and submission
+7. Team check, then merge `ved/model` to main
 
 ---
 

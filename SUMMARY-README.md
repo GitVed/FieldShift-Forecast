@@ -6,7 +6,7 @@ This file is the full context for teammates and for any AI assistant helping on 
 
 The short, presentable version is README.md. Jobs and owners are in TASKS.md.
 
-Last updated Sat Nov 14, 2026, 2 PM.
+Last updated Sat Nov 14, 2026, evening. All four branches are integrated on `ved/model`, not yet on main.
 
 ---
 
@@ -25,16 +25,16 @@ FieldShift Forecast helps a farmer near Harrow, Ontario choose a crop rotation t
 
 ## 2. Current status and who is doing what
 
-The repo now contains model skeletons and the independent Model 2 implementation. See the status update above.
+Integrated on `ved/model`: Dev's cached NASA and soil data, Model 1 on real data, Vedant's Model 2, Shlok's frontend, and the API. 59 tests pass. Not yet on main.
 
 | Person | Current job |
 |---|---|
-| Dev Patel | Checking the NASA data and how to integrate and use it. Saving CSVs. Recording sources.json. Then trend.py, SoilGrids, database |
-| Ved Patel | Model 1 suitability, FastAPI skeleton |
-| Shlok Mehta | Interface. Leaflet map, Detect, Predict, Plan screens, making it look good |
-| Vedant Soni | Here now. Model 2 rotation scorer first, with the Harrow number checks that block it. Later the demo script, pitch, and submission |
+| Dev Patel | Done: POWER, GLDAS, IMERG, HWSD2 cached, trend engine, SQLite and optional Postgres. Open: soil carbon check |
+| Ved Patel | Done: Model 1 on real data, API, integration. Now also covering the open evidence items |
+| Shlok Mehta | Done: frontend, now wired to the API. Open: offline map tiles, print layout |
+| Vedant Soni | Done: Model 2 scorer, evidence audit, prices. Open: corn and wheat yields, pitch angle, submission |
 
-Details are in TASKS.md. We use one git branch per person (`dev/nasa-data`, `ved/model`, `shlok/ui`, `vedant/pitch`) and merge small pieces to main often. Main must always run.
+Details are in TASKS.md. We use one git branch per person (`dev/data`, `ved/model`, `shlok/front`, `vedant/model2`) and merge small pieces to main often. Main must always run.
 
 ## 3. Two models, the core idea, do not change it
 
@@ -46,8 +46,8 @@ Details are in TASKS.md. We use one git branch per person (`dev/nasa-data`, `ved
 **Model 2 recommends crops and rotation, with why, backed by data.**
 - Input is the suitability percents from Model 1
 - Output is a ranked rotation and why
-- Why this crop, because its ideal temperature, rain, pH, and N/P/K range matches this field. Source is Kaggle, SF24, and FAO GAEZ
-- Why this rotation, because Harrow trial data shows corn, soy, wheat gives plus 50 percent soy yield and plus 43 percent corn yield over continuous cropping. Soil carbon rises from under 2 percent to 2.25 percent. Diverse rotations are 14 to 90 percent better in drought years
+- Why this crop, because of its FAO GAEZ suitability index here, its FAO crop water need against measured rain, and its OMAFRA pH target. See section 3c
+- Why this rotation, because trial data shows soybeans at 64 bu/ac after corn and wheat against 41 bu/ac in continuous soy (verified). The corn gains are not verified yet. Soil carbon rises from under 2 percent to 2.25 percent. Diverse rotations are 14 to 90 percent better in drought years
 - Overall percent is average crop suitability plus rotation benefit minus soil penalty
 - Example (SAMPLE). Corn, soy, wheat 92 percent. Corn, corn, soy 67 percent. Continuous soy 38 percent
 
@@ -86,6 +86,17 @@ Catches to keep in mind
 - A fixed GAEZ number will not change in the dry-year and 2035 views. Range fit scores will, because they use temperature and rain
 - Kaggle nitrogen is kg/ha, so do not mix it with SoilGrids nitrogen. Kaggle also has no soil moisture, organic carbon, or texture
 - How to download GAEZ is UNVERIFIED. Check the GAEZ data portal
+
+## 3c. Model 1 method, decided Sat Nov 14 evening
+
+This replaces the OMAFRA range fallback in 3b. Vedant's evidence audit (docs/EVIDENCE.md) found no source for those temperature and rain ranges.
+
+- Normal year score is the GAEZ v5 Suitability Index, 2001-2020, rain-fed, high input
+- 2035 score is GAEZ v5, 2021-2040, SSP370 ensemble. It is FAO's own future-climate suitability
+- The 2012 dry year keeps the baseline score and shows measured stress beside it. No source gives a crop response for one dry season
+- Beside each score: May to September rain against the FAO crop water need, and soil pH against the OMAFRA target. These are shown, never blended into the score
+- Scenarios come from Dev's data. Normal is 1991-2020. Dry is 2012. 2035 dry is 2012 plus the measured temperature trend. Rain is not extrapolated because its trend is inconclusive
+- Pilot point stays at 42.0356, -82.9183. The trial site is about 25 km away at Woodslee, in a different POWER cell. Say so wherever trial numbers appear
 
 ## 4. Decision locked, Avenue 1 Harrow is main
 
@@ -291,13 +302,14 @@ Decision. Do Harrow deep, not global shallow. Build the method so it can go glob
 
 ## 14. Open items
 
-- Harrow point is 42.0356, -82.9183, provided by Ved. Vedant confirms. Dev marks it UNVERIFIED until then
-- No price source or date has been chosen for corn, soy, or wheat
-- The climate adjustment rule for Model 2 is not defined
-- Some Harrow trial numbers need a source check (see section 5)
-- Kaggle rainfall units need matching to Harrow data (see section 8)
-- SMAP is a short record, so check whether a trend on it is meaningful
-- The rotation list. Score the rotations that have Harrow trial numbers, show the top 3, and show continuous cropping as the baseline
+- Pilot point 42.0356, -82.9183 is kept. The field polygon is still SAMPLE. The trial site is about 25 km away (section 3c)
+- Prices are chosen: Grain Farmers of Ontario, September 2026 (docs/EVIDENCE.md)
+- Corn and wheat trial yields are not verified. Only soybean yields are (docs/EVIDENCE.md)
+- Rotation benefit and soil penalty weights have no source, so the overall rotation score stays pending
+- The climate adjustment for yield stays 1. Climate shows through Model 1 and the stress facts instead
+- HWSD2 topsoil organic carbon (about 6.6 percent) does not match the trial's 2 to 2.25 percent
+- The May to September window needs a crop calendar source. Winter wheat grows October to July
+- July soil moisture trend is not significant (2000 to 2025). Do not claim it is falling
 
 ## 14b. Gaps found in review, Sat 2 PM
 
