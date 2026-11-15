@@ -1,0 +1,11 @@
+file,rows,date_min,date_max,quality_counts,units
+data/seed/gldas_soil_moisture_harrow.csv,1248,2000-01-01,2025-12-01,"{""valid"": 1248}",m3/m3
+data/seed/hwsd_soil_harrow.csv,42,static,static,"{""regional_estimate"": 42}",%; g/kg; pH
+data/seed/imerg_precip_harrow.csv,331,1998-06-01,2025-12-01,"{""valid"": 331}",mm/month
+data/seed/power_humidity_harrow_1981_2025.csv,540,1981-01-01,2025-12-01,"{""valid"": 540}",%
+data/seed/power_humidity_north_1981_2025.csv,540,1981-01-01,2025-12-01,"{""valid"": 540}",%
+data/seed/power_precip_harrow_1981_2025.csv,540,1981-01-01,2025-12-01,"{""valid"": 540}",mm/month
+data/seed/power_precipitation_north_1981_2025.csv,540,1981-01-01,2025-12-01,"{""valid"": 540}",mm/month
+data/seed/power_t2m_harrow_1981_2025.csv,540,1981-01-01,2025-12-01,"{""valid"": 540}",degC
+data/seed/power_temperature_north_1981_2025.csv,540,1981-01-01,2025-12-01,"{""valid"": 540}",degC
+data/seed/soilgrids_harrow.csv,18,static,static,"{""invalid"": 18}",%; g/kg; pH

@@ -1,0 +1,19 @@
+date,depth_top_cm,depth_bottom_cm,variable,value,unit,native_value,native_unit,cell_id,source_id,quality_flag,reason
+,0,5,ph,,pH,0.0,pH x 10,phh2o_0-5cm_mean_harrow_r2_c2,soilgrids_phh2o_0-5cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,5,15,ph,,pH,0.0,pH x 10,phh2o_5-15cm_mean_harrow_r2_c2,soilgrids_phh2o_5-15cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,15,30,ph,,pH,0.0,pH x 10,phh2o_15-30cm_mean_harrow_r2_c2,soilgrids_phh2o_15-30cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,0,5,total_nitrogen,,g/kg,0.0,cg/kg,nitrogen_0-5cm_mean_harrow_r2_c2,soilgrids_nitrogen_0-5cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,5,15,total_nitrogen,,g/kg,0.0,cg/kg,nitrogen_5-15cm_mean_harrow_r2_c2,soilgrids_nitrogen_5-15cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,15,30,total_nitrogen,,g/kg,0.0,cg/kg,nitrogen_15-30cm_mean_harrow_r2_c2,soilgrids_nitrogen_15-30cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,0,5,organic_carbon,,g/kg,0.0,dg/kg,soc_0-5cm_mean_harrow_r2_c2,soilgrids_soc_0-5cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,5,15,organic_carbon,,g/kg,0.0,dg/kg,soc_5-15cm_mean_harrow_r2_c2,soilgrids_soc_5-15cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,15,30,organic_carbon,,g/kg,0.0,dg/kg,soc_15-30cm_mean_harrow_r2_c2,soilgrids_soc_15-30cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,0,5,sand,,%,0.0,g/kg,sand_0-5cm_mean_harrow_r2_c2,soilgrids_sand_0-5cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,5,15,sand,,%,0.0,g/kg,sand_5-15cm_mean_harrow_r2_c2,soilgrids_sand_5-15cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,15,30,sand,,%,0.0,g/kg,sand_15-30cm_mean_harrow_r2_c2,soilgrids_sand_15-30cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,0,5,silt,,%,0.0,g/kg,silt_0-5cm_mean_harrow_r2_c2,soilgrids_silt_0-5cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,5,15,silt,,%,0.0,g/kg,silt_5-15cm_mean_harrow_r2_c2,soilgrids_silt_5-15cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,15,30,silt,,%,0.0,g/kg,silt_15-30cm_mean_harrow_r2_c2,soilgrids_silt_15-30cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,0,5,clay,,%,0.0,g/kg,clay_0-5cm_mean_harrow_r2_c2,soilgrids_clay_0-5cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,5,15,clay,,%,0.0,g/kg,clay_5-15cm_mean_harrow_r2_c2,soilgrids_clay_5-15cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback
+,15,30,clay,,%,0.0,g/kg,clay_15-30cm_mean_harrow_r2_c2,soilgrids_clay_15-30cm_mean,invalid,soil_pixel_invalid_ph_or_texture; no numeric fallback

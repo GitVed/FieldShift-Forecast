@@ -10,9 +10,9 @@ Last updated Sat Nov 14, 2 PM. Building closes 6 PM tonight. After that we work 
 
 | Person | Job right now | Branch |
 |---|---|---|
-| Dev Patel | Check the NASA data, work out how to use it, save CSVs, record sources | `dev/nasa-data` |
+| Dev Patel | Check the NASA data, work out how to use it, save CSVs, record sources | `dev/data` |
 | Ved Patel | Model 1 suitability (V2), field config, FastAPI skeleton (V4) | `ved/model` |
-| Shlok Mehta | Interface. Leaflet map, three screens, make it look good | `shlok/ui` |
+| Shlok Mehta | Interface. Leaflet map, three screens, make it look good | `shlok/front` |
 | Vedant Soni | Here now. Model 2 rotation scorer (V3) first, with the number checks in VS1 that block it. Pitch and submission later | `vedant/pitch` |
 | Whoever finishes first | Avenue 2, optional, at the very end of this file | `avenue-2-global` |
 
@@ -23,7 +23,7 @@ Last updated Sat Nov 14, 2 PM. Building closes 6 PM tonight. After that we work 
 - Pre-fetch and cache. The demo reads cache and never calls an API live.
 - Use only the Harrow trial numbers listed in SUMMARY-README.md.
 - Put the source under every number on screen.
-- If a dataset fails, write the fallback in `data/seed/sources.json` and move on. Do not block the build.
+- If a dataset fails, write the fallback in `data/seed/sources.csv` and move on. Do not block the build.
 
 ## Git, one branch each
 
@@ -59,8 +59,8 @@ Who owns which files, so we do not collide
 
 | Files | Owner |
 |---|---|
-| `data/seed/sources.json`, NASA CSVs, `backend/trend.py`, `backend/db.py`, `docker-compose.yml` | Dev |
-| `backend/suitability.py`, `backend/app.py`, `requirements.txt`, `backend/field_config.json`, Kaggle, SF24 and GAEZ CSVs | Ved |
+| `data/seed/sources.csv`, NASA CSVs, `backend/trend.py`, `backend/db.py`, `docker-compose.yml` | Dev |
+| `backend/suitability.py`, `backend/app.py`, `requirements.txt`, `data/seed/sources.json` (model data entries), `backend/field_config.json`, Kaggle, SF24 and GAEZ CSVs | Ved |
 | `backend/rotation.py`, `data/seed/harrow_trial_yields.csv` (Vedant fixes the UNVERIFIED rows, tells Ved) | Vedant |
 | `frontend/` | Shlok |
 | `README.md`, `SUMMARY-README.md`, pitch and submission files | Vedant |
@@ -94,87 +94,31 @@ These are places where the plan does not connect yet. Talk about them early. The
 
 # DEV PATEL
 
-## D1. Check the NASA data (do this first)
+## D1. Check the NASA data
 
-Goal is to answer two questions. Is the NASA data good to use? How do we use it?
+**Complete with documented limitations.** POWER temperature/rain/humidity, IMERG cross-check, GLDAS four-layer soil moisture and source evidence are cached and validated. Units, internal timestamps, fills, missing months, provenance and output hashes are checked. See [RESOURCES.md](RESOURCES.md).
 
-**Files to create**
-- `notebooks/01_power_fetch.ipynb`
-- `data/seed/power_t2m_harrow_1981_2025.csv`
-- `data/seed/power_precip_harrow_1981_2025.csv`
-- `data/seed/smap_soil_moisture_harrow.csv`
-- `data/seed/imerg_precip_harrow.csv`
-- `data/seed/sources.json`
-- `data/seed/NASA_CHECK.md` (short notes, what works, what failed, the fallback, how to use each dataset)
-
-**Datasets to fetch**
-- NASA POWER monthly, temperature (T2M) and precipitation, community AG, 1981 to 2025, free, no key, server side only
-- SMAP SPL4SMGP soil moisture, 2015 to present, needs Earthdata login
-- GPM IMERG rainfall, 2000 to present, needs Earthdata login
-
-**Steps**
-1. Use the Harrow point 42.0356, -82.9183 (provided by Ved). Mark it UNVERIFIED until Vedant confirms. Do not use Toronto City Hall coordinates.
-2. Use this URL pattern for POWER and fill in the Harrow coordinates `https://power.larc.nasa.gov/api/temporal/monthly/point?parameters=T2M&community=AG&longitude=LON&latitude=LAT&start=1981&end=2025&format=JSON`
-3. Look up the right precipitation parameter name in the POWER docs. Do not guess it.
-4. Fetch SMAP and IMERG for the same point. Save CSVs.
-5. Check the values. Are they plausible? Any fill values? Any missing months that would break a trend?
-6. Run a quick check on a buddy cell about 0.5 degrees north. Does the trend hold there?
-7. Note that SMAP starts in 2015, so it is a short record. Say if it is too short to trust.
-8. Record every file in `sources.json` with the request URL, retrieval time, units, coordinates, and the grid cell the API resolved.
-
-**Done looks like**
-- Four CSVs exist, or a written fallback for any that failed
-- Every file has an entry in `sources.json`
-- `NASA_CHECK.md` says yes or no for each dataset and how to use it
-- Ved and Shlok know the file names and column names
-
-**Fallback.** If SMAP or IMERG fail, write it down and move on. Harrow trial plus POWER alone is enough for a demo. The NASA Hydrology Time Series Viewer was reported down Nov 13 to 14, so use POWER and Giovanni directly.
+POWER requested points matched their inferred MERRA-2 centres for all 1,620 parameter-month values each; exact upstream provider cell IDs remain unverified because the API echoes request coordinates. The location is user supplied; field boundaries remain unverified.
 
 ## D2. Trend engine
 
-**Files to create**
-- `backend/trend.py`
+**Complete.** `backend/trend.py` deseasonalises monthly records, applies autocorrelation-corrected Mann–Kendall and elapsed-time Sen slopes, compares the distinct north point and repeats with a 1991 start. Missing/bad records are rejected. Temperature increases consistently; rainfall is inconclusive. Results: `data/seed/trend_results.csv`.
 
-**Steps**
-1. Write Mann-Kendall and Sen's slope. Units are degrees C per decade and mm per decade.
-2. Deseasonalise first and mask bad quality values.
-3. Add the buddy check on the cell about 0.5 degrees north.
-4. Add the sensitivity check with start year 1991 instead of 1981.
-5. If the trend does not hold nearby, label it inconclusive.
-6. Test on real POWER CSVs. If they are not ready, test on sample data and label it SAMPLE.
+## D3. Soil layer
 
-**Done looks like.** `python backend/trend.py` prints slope, p-value, confidence, and buddy check result for Harrow.
-
-## D3. SoilGrids soil layer
-
-**Files to create**
-- `notebooks/02_soilgrids_wcs.ipynb`
-- `data/seed/soilgrids_harrow.csv` (and the GeoTIFF if small)
-
-**Steps**
-1. Use WCS, not REST. REST is paused. The endpoint is `https://maps.isric.org/mapserv?map=/map/soilgrids.map`
-2. Ask for a small box around Harrow. Get texture (sand, silt, clay), pH, soil organic carbon, and nitrogen if available.
-3. Label it CACHED and modelled, not lab-measured.
-4. If WCS fails, fall back to the Harrow trial soil, Brookston clay loam, and say so in `sources.json`.
-
-**Done looks like.** CSV exists with a `sources.json` entry, or the fallback is written down.
+**Complete using documented fallback.** SoilGrids containing-pixel NoData was verified against the original ISRIC tile. Its 18 diagnostic rows remain null. FAO HWSD mapping unit 3070 supplies 42 explicitly labeled regional-estimate values at seven native depths in `hwsd_soil_harrow.csv`. Total nitrogen is not plant-available nitrogen. Field soil tests remain necessary for field-verified values; the team must accept regional estimates before using them in the model.
 
 ## D4. Database and Docker
 
-**Files to create**
-- `backend/db.py`
-- `backend/seed.py` (loads `data/seed/*.csv` into Postgres and checks each file has a source in `sources.json`)
-- `docker-compose.yml`
-
-**Tables.** data_sources, grid_cells, monthly_climate, soil_profiles, trend_runs, rotation_scores
-
-**Done looks like.** `docker compose up` starts Postgres and the seed script loads without errors.
+**Implemented; actual PostgreSQL verified. Docker startup pending on a Docker-enabled machine.** `backend/db.py`, `backend/seed.py`, `Dockerfile` and `docker-compose.yml` provide all six required tables, provenance/hash validation, transactional offline seeding and persistent PostgreSQL storage. Repeated seeding preserves Ved's rotation outputs. Actual PostgreSQL tests loaded 4,819 climate rows, 60 soil rows and 8 trend results without duplication. Docker Compose configuration is validated; this computer has no Docker engine.
 
 ## D5. Trend endpoint
 
-Once Ved's `backend/app.py` is merged to main, add `GET /api/trend/{cell_id}` and `GET /api/series/{cell_id}`.
+**Standalone endpoints complete and tested; final model-app integration pending.** `backend/data_api.py` supplies `/api/trend/{cell_id}` and `/api/series/{cell_id}` with CACHED labels, source URLs, units, grid metadata and quality flags. Tested with SQLite and actual PostgreSQL. Ved's `backend/app.py` is not present; include `make_router()` when that app becomes available. See the integration example in [RESOURCES.md](RESOURCES.md).
 
-**Done looks like.** The trend endpoint returns slope, p-value, confidence, and the buddy check for Harrow.
+## Dev cleanup and review
+
+Python extraction/runtime code, useful tests, source and processed CSVs, original project documentation and necessary runtime configuration are retained. Large raw archives, notebooks and duplicate research reports are removed after provenance preservation. `RESOURCES.md` consolidates dataset links, decisions, limitations, instructions and handoff. No changes were pushed or merged to main.
 
 ---
 

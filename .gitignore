@@ -1,5 +1,11 @@
-data/raw/
+# Original archives, rasters, documentation and acquisition metadata stay local.
+/data/raw/
+.venv/
 .env
 __pycache__/
-*.pyc
+*.py[cod]
 .ipynb_checkpoints/
+
+.cache/
+.DS_Store
+*.part
