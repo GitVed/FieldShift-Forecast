@@ -47,19 +47,18 @@
 <div class="map-legend"><div class="legend-title"><span id="legend-label">Cooler</span><span id="legend-right">Warmer</span></div><div class="color-ramp" id="legend-ramp"></div><div class="legend-values"><span id="legend-min">—</span><span id="legend-max">—</span></div></div>
 <div class="basemap-note" id="basemap-note" hidden>Basemap unavailable · source grid remains interactive</div>
 </div>
-<div class="map-caption"><span><i class="legend-square"></i><span id="grid-caption">Source-grid coverage · regional estimates</span></span></div>
 <section class="timeline" aria-label="Annual history and climate projection timeline">
 <div class="timeline-heading"><div><span class="eyebrow">MOVE THROUGH THE SEASONS</span><h3>Five years back. Five years ahead.</h3></div><button class="play-button" id="play-timeline" aria-label="Play timeline" aria-pressed="false"><span id="play-icon">▶</span><span id="play-label">Play</span></button></div>
 <div class="timeline-axis"><div class="timeline-chart" id="timeline-chart" aria-hidden="true"></div>
 <div class="scrubber-row"><button class="step-button" id="previous-year" aria-label="Previous year">‹</button><label for="year-range" class="sr-only">Selected year</label><input id="year-range" type="range" min="2021" max="2030" value="2026" step="1" aria-valuetext="2026, climate projection"><button class="step-button" id="next-year" aria-label="Next year">›</button></div>
-<div class="year-ticks" id="year-ticks"></div></div><div class="timeline-periods"><span><i></i>Observed history</span><span><i></i>Projected climate · SSP370</span></div><p class="timeline-note" id="timeline-note">Harrow trial yields do not change with the year. The year decides two things. If NASA rain puts May to September in the driest third of 1991-2020, the list uses the 2012 dry-year order; otherwise it uses the trial evidence order. The year also changes the rain check and, from 2026, the corn climate range.</p>
+<div class="year-ticks" id="year-ticks"></div></div><div class="timeline-periods"><span><i></i>Observed history</span><span><i></i>Projected climate · SSP370</span></div>
 </section>
 </div>
 </section>
 <aside class="recommendation-panel" aria-label="Crop rotation recommendations">
-<div class="panel-intro"><h2 id="panel-title">Rotations that held up in the trial.</h2></div>
+<div class="panel-intro"><h2 id="panel-title">Compare your rotations.</h2></div>
 <div class="panel-tabs" role="tablist" aria-label="Recommendation mode"><button id="tab-recommendations" role="tab" aria-selected="true" aria-controls="panel-body" class="panel-tab active">Rotations</button><button id="tab-priority" role="tab" aria-selected="false" aria-controls="panel-body" class="panel-tab"><svg><use href="#i-target"/></svg>My crop</button><button id="tab-others" role="tab" aria-selected="false" aria-controls="panel-body" class="panel-tab">Other crops</button></div>
-<p class="ranking-note" id="panel-description">Ordered by trial evidence, or by the 2012 dry-year order when NASA rain says the year is dry-leaning. We do not predict bushels.</p>
+<p class="ranking-note" id="panel-description">Compare rotations for the selected year.</p>
 <p class="panel-note" id="panel-note" hidden></p>
 <form class="priority-form" id="priority-form" hidden><fieldset><legend>What do you want to grow?</legend><div class="crop-picker"><button type="button" data-crop="maize" aria-pressed="false"><svg><use href="#i-corn"/></svg><span>Corn</span></button><button type="button" data-crop="soybean" aria-pressed="false"><svg><use href="#i-soy"/></svg><span>Soybean</span></button><button type="button" data-crop="wheat" aria-pressed="false"><svg><use href="#i-wheat"/></svg><span>Wheat</span></button></div></fieldset><label for="yield-target">Your yield target <span>optional</span></label><div class="target-input"><input id="yield-target" type="number" min="0.1" step="0.1" placeholder="e.g. 150" inputmode="decimal"><span>bu/ac</span></div><div class="form-actions"><button class="primary-button" type="submit">Check my target <svg><use href="#i-arrow"/></svg></button><button type="button" id="reset-priority" class="text-button">Reset</button></div><p id="priority-error" class="form-error" role="alert" hidden></p><p id="priority-notice" class="major-notice" role="status" hidden></p></form>
 <div class="target-summary" id="target-summary" hidden aria-live="polite"></div>
@@ -69,9 +68,9 @@
 </aside>
 <div class="metric-strip" id="metric-strip" aria-live="polite"><div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div></div>
 <div class="outlook-footnote"><svg><use href="#i-info"/></svg><span id="outlook-footnote">Future values are climate scenarios, not forecasts of actual weather. Field boundary not surveyed.</span></div>
-<section class="trend-card" id="trend-card" hidden aria-live="polite"></section>
-<section class="trend-card season-card" id="season-card" hidden aria-live="polite"></section>
-<section class="trend-card yield-model-card" id="yield-model-card" hidden aria-live="polite"></section>
+<details class="insight-box"><summary>Long-term climate trends</summary><section class="trend-card" id="trend-card" hidden aria-live="polite"></section></details>
+<details class="insight-box"><summary>Explore a past season</summary><section class="trend-card season-card" id="season-card" hidden aria-live="polite"></section></details>
+<details class="insight-box"><summary>Climate and crop yields</summary><section class="trend-card yield-model-card" id="yield-model-card" hidden aria-live="polite"></section></details>
 </div>
 <footer class="workspace-footer"><span>FieldShift <i>·</i> Harrow pilot</span><span>Regional climate. Historical trial evidence. Better-informed decisions.</span></footer>
 </main>

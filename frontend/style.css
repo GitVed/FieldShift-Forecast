@@ -275,5 +275,44 @@ input[type=range]::-moz-range-thumb { box-sizing:border-box; width:17px; height:
 .target-scale{display:flex;justify-content:space-between;font-size:9px;color:#87967a;margin-top:6px}
 .target-position p{margin:6px 0 0;font-size:11px}
 @media(max-width:600px){.panel-note{margin:0 17px 10px}}
-.timeline-note{margin:10px 0 0;font-size:11px;line-height:1.6;color:#5f7360;background:#f6f9f0;border-radius:8px;padding:8px 10px}
-@media(max-width:600px){.timeline-note{font-size:10px}}
+/* Compact planning cards; calculations stay in expandable evidence. */
+.crop-filters { align-items:center; justify-content:space-between; gap:10px; padding:4px 0 10px; }
+.crop-filters label { font-size:12px; color:var(--muted); }
+.crop-filters select { font:inherit; font-size:12px; color:var(--forest); background:var(--paper); border:1px solid var(--line); border-radius:9px; padding:10px 30px 10px 12px; min-height:42px; max-width:100%; cursor:pointer; }
+.crop-filters select:focus-visible { outline:3px solid #70b99b; outline-offset:3px; }
+.crop-card dl { grid-template-columns:1fr auto; gap:8px 12px; margin:12px 0; }
+.crop-card dd { text-align:right; }
+.crop-card summary { margin-top:12px; }
+.card-caution { font-size:10px; line-height:1.5; color:var(--muted); margin:0 0 14px; }
+.target-check small { display:block; line-height:1.5; margin-top:5px; }
+.field-popup { display:grid; grid-template-columns:auto auto; gap:8px 14px; margin:4px; font-family:'DM Sans',sans-serif; }
+.field-popup dt { color:var(--muted); }
+.field-popup dd { margin:0; font-weight:500; }
+/* Optional insight drawers and readable chart summaries. */
+.option-nav { justify-content:center; gap:18px; }
+.option-arrow { display:flex; align-items:center; justify-content:center; width:42px; height:42px; padding:0 0 3px; font-size:30px; }
+.option-position { min-width:110px; }
+.dashboard>.insight-box { grid-column:1 / -1; min-width:0; background:white; border:1px solid var(--line); border-radius:12px; }
+.insight-box>summary { cursor:pointer; padding:18px 20px; font:500 17px Outfit,sans-serif; color:var(--forest); }
+.insight-box[open]>summary { border-bottom:1px solid var(--line); }
+.insight-box>.trend-card { border:0; margin:0; padding:20px; }
+.insight-box strong { font-size:20px; }
+.insight-chart { margin:16px 0; min-width:0; }
+.insight-chart figcaption { font-size:12px; color:var(--muted); margin-bottom:8px; }
+.insight-chart svg { display:block; width:100%; height:auto; max-height:240px; fill:none; stroke:none; }
+.insight-chart text { fill:var(--muted); font:11px 'DM Sans',sans-serif; }
+.insight-chart .chart-line { fill:none; stroke:#4e805b; stroke-width:2.5; stroke-linejoin:round; }
+.insight-chart .chart-point { fill:#3b7455; stroke:white; stroke-width:2; }
+.insight-numbers { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; }
+.insight-numbers span,.insight-stat>span { font-size:12px; color:var(--muted); }
+.insight-numbers strong { margin:5px 0 0; }
+.insight-box .insight-note { margin-top:14px; font-size:11px; }
+@media(max-width:600px) {
+ .insight-box>summary { font-size:16px; padding:16px; }
+ .insight-box>.trend-card { padding:16px; }
+ .insight-numbers { grid-template-columns:1fr 1fr; gap:14px; }
+ .insight-numbers strong { font-size:17px; }
+ .season-head { flex-wrap:wrap; }
+}
+
+.panel-note { font-size:11px; color:var(--forest); }

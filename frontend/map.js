@@ -3,7 +3,7 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const state = {year:2026,layer:'temperature',mode:'recommendations',crop:null,target:null,timeline:null,pilot:null,detect:null,crops:null,cropFilter:{grown:false,gaez:0},recommendations:null,map:null,cell:null,marker:null,request:0,controller:null,timer:null,pending:null,optionIndex:0,activeLocation:{id:'harrow',name:'Harrow, Ontario'},locations:[]};
+const state = {year:2026,layer:'temperature',mode:'recommendations',crop:null,target:null,timeline:null,pilot:null,detect:null,crops:null,cropFilter:{gaez:0},recommendations:null,map:null,cell:null,marker:null,request:0,controller:null,timer:null,pending:null,optionIndex:0,activeLocation:{id:'harrow',name:'Harrow, Ontario'},locations:[]};
 const layers = {
  temperature:{name:'Growing-season temperature',short:'Temperature',unit:'°C',icon:'sun',decimals:1,low:'Cooler',high:'Warmer',palette:['#367fc2','#f1e9db','#cc4946']},
  precipitation:{name:'Growing-season rainfall',short:'Rainfall',unit:'mm',icon:'rain',decimals:0,low:'Drier',high:'Wetter',palette:['#e2dcf3','#a08bc9','#5d479c']},
@@ -52,11 +52,15 @@ function initMap(){
  const tiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery © <a href="https://www.esri.com/">Esri</a>, Vantor, Earthstar Geographics, GIS User Community'}).addTo(state.map);
  tiles.on('tileerror',()=>{$('basemap-note').hidden=false;});tiles.on('tileload',()=>{$('basemap-note').hidden=true;});
  const field=state.pilot;
- if(field?.polygon){L.polygon(field.polygon,{color:'#f4f1d0',weight:2,fillColor:'#d9e8a6',fillOpacity:.25}).addTo(state.map).bindPopup(`<strong>SAMPLE field</strong><br>${esc(field.polygon_note||'Not a surveyed field boundary.')}`);}
+ const polygon=field?.polygon;
+ const width=polygon?.length>=4?Math.round(L.latLng(polygon[0]).distanceTo(L.latLng(polygon[1]))/10)*10:null;
+ const height=polygon?.length>=4?Math.round(L.latLng(polygon[1]).distanceTo(L.latLng(polygon[2]))/10)*10:null;
+ const fieldPopup=`<dl class="field-popup"><dt>Latitude</dt><dd>${fmt(location.lat,4)}°</dd><dt>Area</dt><dd>${width&&height?`${width} × ${height} m · ${fmt(width*height/10000,1)} ha`:'Not available'}</dd></dl>`;
+ if(field?.polygon){L.polygon(field.polygon,{color:'#f4f1d0',weight:2,fillColor:'#d9e8a6',fillOpacity:.25}).addTo(state.map).bindPopup(fieldPopup);}
  if(field?.trial_site){L.circleMarker([field.trial_site.lat,field.trial_site.lon],{radius:7,color:'#fff',weight:2,fillColor:'#b5793b',fillOpacity:1}).addTo(state.map).bindTooltip('Woodslee rotation trial',{className:'grid-label',direction:'top'}).bindPopup(`<strong>Woodslee rotation trial</strong><br>${esc(field.trial_site.dms||'')}<br>A point, not a field boundary. About ${fmt(field.trial_site.distance_km,0)} km from the SAMPLE field. Trial yields come from here.`);}
  state.marker=L.marker([location.lat,location.lon],{icon:L.divIcon({className:'pilot-marker',html:`<div class="pilot-marker-body">${icon('leaf')}</div>`,iconSize:[32,32],iconAnchor:[16,30]})}).addTo(state.map);
- state.marker.bindTooltip('SAMPLE field',{permanent:true,className:'grid-label',direction:'top',offset:[0,-24]});
- state.marker.bindPopup(`<strong>SAMPLE field near Harrow</strong><br>${fmt(location.lat,4)}° N, ${fmt(Math.abs(location.lon),4)}° W<br>300 m square of cropland on ESA WorldCover 2021. Not a surveyed field boundary.`);
+ state.marker.bindTooltip('Harrow',{permanent:true,className:'grid-label',direction:'top',offset:[0,-24]});
+ state.marker.bindPopup(fieldPopup);
  state.marker.on('click',()=>animateContent($('map-reading')));
 }
 function animateContent(node,direction=1){
@@ -93,7 +97,6 @@ function updateMap(){
   const [lo,hi]=rangeFor(state.layer);$('legend-min').textContent=`${fmt(lo,meta.decimals)} ${meta.unit}`;$('legend-max').textContent=`${fmt(hi,meta.decimals)} ${meta.unit}`;
  }
  const grid=state.layer==='soil_moisture'?year.soil_moisture_footprint:year.footprint;
- $('grid-caption').textContent=state.layer==='soil'?'Point reference · SoilGrids 250 m at the field':'Harrow focus area · regional point estimate, not a field scan';
  if(state.map){
   const color=missing||state.layer==='soil'?'#b4c3a7':colorFor(m.value,state.layer);
   const style={color,fillColor:color,fillOpacity:missing||state.layer==='soil'?0:.30,weight:2,dashArray:'5 5'};
@@ -104,34 +107,37 @@ function updateMap(){
  }
  $('outlook-footnote').textContent=state.layer==='soil'?'Soil properties stay static. SoilGrids is a 250 m model estimate, not a field soil test.':future?'Climate scenarios, not weather forecasts. The range is model spread, not a probability. No field-level hotspots are inferred.':'Observed regional data. May–September is a planning window, not the winter-wheat growing season.';
 }
+function insightChart(id,points,unit,label,highlight=null){
+ const rows=points.filter(p=>Number.isFinite(p[1])).sort((a,b)=>a[0]-b[0]);
+ if(rows.length<2)return '<p>Not enough data to draw a chart.</p>';
+ const w=640,h=180,left=48,right=18,top=18,bottom=34;
+ const min=Math.min(...rows.map(p=>p[1])),max=Math.max(...rows.map(p=>p[1])),pad=(max-min)*.15||1,lo=min-pad,hi=max+pad;
+ const x=y=>left+(y-rows[0][0])/(rows.at(-1)[0]-rows[0][0])*(w-left-right),y=v=>top+(hi-v)/(hi-lo)*(h-top-bottom);
+ const path=rows.map((p,i)=>`${i?'L':'M'}${x(p[0]).toFixed(2)},${y(p[1]).toFixed(2)}`).join(' '),base=h-bottom;
+ const active=rows.find(p=>p[0]===highlight);
+ return `<figure class="insight-chart"><figcaption>${esc(label)}</figcaption><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}, ${rows[0][0]} to ${rows.at(-1)[0]}, ${fmt(min,1)} to ${fmt(max,1)} ${esc(unit)}"><defs><linearGradient id="${id}-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#77a47a" stop-opacity=".4"/><stop offset="100%" stop-color="#77a47a" stop-opacity=".02"/></linearGradient></defs><path class="chart-area" d="${path} L${x(rows.at(-1)[0])},${base} L${left},${base} Z" fill="url(#${id}-fill)"/><path class="chart-line" d="${path}"/>${active?`<circle cx="${x(active[0])}" cy="${y(active[1])}" r="5" class="chart-point"><title>${active[0]}: ${fmt(active[1],1)} ${esc(unit)}</title></circle>`:''}<text x="${left-8}" y="${top+5}" text-anchor="end">${fmt(hi,0)}</text><text x="${left-8}" y="${base}" text-anchor="end">${fmt(lo,0)}</text><text x="${left}" y="${h-10}">${rows[0][0]}</text><text x="${w-right}" y="${h-10}" text-anchor="end">${rows.at(-1)[0]}</text></svg></figure>`;
+}
 function renderTrend(){const box=$('trend-card'),d=state.detect;if(!box||!d){if(box)box.hidden=true;return;}
- const t=d.trends.find(x=>x.id==='temperature'),r=d.trends.find(x=>x.id==='rainfall'),m=d.trends.find(x=>x.id==='soil_moisture');
- const up=t&&t.verdict==='increasing',confirmed=/Temperature supported/.test(d.buddy_check||'');
+ const t=d.trends.find(x=>x.id==='temperature'),up=t&&t.verdict==='increasing';
  box.hidden=false;
- box.innerHTML=`<div><span class="eyebrow">MEASURED SINCE 1981 · NASA POWER</span><strong>${up?`Temperature up ${fmt(t.value,2)} °C per decade`:'No clear temperature trend'}</strong><p>${up&&confirmed?'Confirmed by the grid cell 0.5° north and by starting the test in 1991. ':''}Rain and July soil moisture show no clear trend.</p></div><details><summary>How we know</summary><div class="detail-copy"><p>Temperature p-value ${esc(t?.p_value)} · rain p-value ${esc(r?.p_value)} · July soil moisture p-value ${esc(m?.p_value)}.</p><p>${esc(d.source)}</p><p>${esc(m?.source||'')}</p><p>${esc(d.note)}</p>${d.data_quality?`<p>Data quality · ${esc(d.data_quality.text)}</p>`:''}</div></details>`;}
+ box.innerHTML=`<div class="insight-stat"><span>Temperature since 1981</span><strong>${up?`+${fmt(t.value,2)} °C per decade`:'No clear trend'}</strong></div><p>Rain and July soil moisture show no clear trend.</p>`;
+}
 function seasonOptions(d){const driest=d.driest_years.power,all=Array.from({length:45},(_,i)=>2025-i);
  const label=y=>`${y}${y===d.highlight_year?' · 2012 dry year':''} · ${fmt(d.rain_by_year_mm.power[y],0)} mm`;
  return `<optgroup label="Driest May to September in NASA POWER">${driest.map(y=>`<option value="${y}" ${y===d.year?'selected':''}>${label(y)}</option>`).join('')}</optgroup><optgroup label="Every year, 1981 to 2025">${all.map(y=>`<option value="${y}" ${y===d.year&&!driest.includes(y)?'selected':''}>${label(y)}</option>`).join('')}</optgroup>`;}
 function renderSeason(){const box=$('season-card'),d=state.season;if(!box||!d){if(box)box.hidden=true;return;}
- box.hidden=false;const p=d.sources.power,i=d.sources.imerg,r=d.root_zone_july_m3m3,nr=d.normal_root_zone_july_m3m3;
- const sign=v=>v==null?'':(v>=0?'+':'')+fmt(v,0);
- box.innerHTML=`<div class="season-head"><div><span class="eyebrow">REPLAY A PAST SEASON · MEASURED, NOT MODELLED</span><strong>May to September ${d.year}${d.year===d.highlight_year?' · the 2012 dry year':''}</strong></div><label class="sr-only" for="season-year">Past year</label><select id="season-year">${seasonOptions(d)}</select></div>
- <ul class="season-facts"><li><span>Rain, NASA POWER</span><strong>${fmt(p.rain_mm,0)} mm · ${sign(p.rain_change_mm)} mm vs normal · driest rank ${p.dryness_rank} of ${p.dryness_of}</strong></li>
- <li><span>Rain, GPM IMERG</span><strong>${i?`${fmt(i.rain_mm,0)} mm · ${sign(i.rain_change_mm)} mm vs normal · driest rank ${i.dryness_rank} of ${i.dryness_of}`:'Not available before 1999'}</strong></li>
- <li><span>Temperature</span><strong>${fmt(d.temp_c,1)} °C · ${d.temp_change_c>=0?'+':''}${fmt(d.temp_change_c,2)} °C vs normal</strong></li>
- <li><span>Degree days above 10 °C</span><strong>${fmt(d.degree_days_above_10c,0)} vs ${fmt(d.normal_degree_days_above_10c,0)} normal</strong></li>
- <li><span>Longest dry spell</span><strong>${fmt(p.dry_spell_days,0)} days vs ${fmt(p.normal_dry_spell_days,0)} normal (POWER)</strong></li>
- <li><span>July soil moisture, 40 to 100 cm</span><strong>${r?`${fmt(r['40-100 cm'],3)} vs ${fmt(nr['40-100 cm'],3)} m³/m³ (GLDAS)`:'Not available before 2000'}</strong></li></ul>
- <details><summary>How we know</summary><div class="detail-copy"><p>${esc(d.note)}</p><p>${esc(d.method)}</p></div></details>`;
+ box.hidden=false;const p=d.sources.power,i=d.sources.imerg,r=d.root_zone_july_m3m3;
+ box.innerHTML=`<div class="season-head"><strong>May to September ${d.year}</strong><label class="sr-only" for="season-year">Past year</label><select id="season-year">${seasonOptions(d)}</select></div>
+ ${insightChart('season-rain',Object.entries(d.rain_by_year_mm.power).map(([year,value])=>[+year,value]),'mm','Growing-season rain · NASA POWER',d.year)}
+ <div class="insight-numbers"><div><span>Rain · POWER</span><strong>${fmt(p.rain_mm,0)} mm</strong></div><div><span>Rain · IMERG</span><strong>${i?`${fmt(i.rain_mm,0)} mm`:'Not available before 1999'}</strong></div><div><span>Temperature</span><strong>${fmt(d.temp_c,1)} °C</strong></div><div><span>Longest dry spell</span><strong>${fmt(p.dry_spell_days,0)} days</strong></div><div><span>July soil moisture · 40–100 cm</span><strong>${r?`${fmt(r['40-100 cm'],3)} m³/m³`:'Not available before 2000'}</strong></div></div>`;
  $('season-year').onchange=e=>loadSeason(Number(e.target.value));}
 function renderYieldModel(){const box=$('yield-model-card'),d=state.yieldModel;if(!box||!d){if(box)box.hidden=true;return;}
- box.hidden=false;const c=d.crops.corn,ex=d.example,miss=c.held_out_2012;
- const row=k=>{const x=d.crops[k];return `<li><span>${k==='corn'?'Corn':k==='soybean'?'Soybean':'Winter wheat'} (${esc(x.window)})</span><strong>${x.beats_no_change?`Beats no change · skill ${fmt(x.skill_leave_one_year_out,3)} and ${fmt(x.skill_5_year_blocks,3)}`:`Does not beat no change · adjustment stays 1`}</strong></li>`;};
- box.innerHTML=`<div><span class="eyebrow">CLIMATE YIELD CHECK · DERIVED · TESTED ON ESSEX COUNTY 1981 TO 2025</span><strong>Corn yield adjusted for climate, soybean and wheat not</strong><p>We fit Essex County yields against NASA rain and heat, then tested on years the model had not seen. Only corn did better than assuming no change, and only modestly.</p></div>
- <ul class="season-facts">${['corn','soybean','wheat'].map(row).join('')}</ul>
- <div class="climate-note miss"><div class="eyebrow">WHERE IT WAS WRONG</div><strong>2012 · predicted ${fmt(miss.predicted_pct,1)}% for Essex corn, real ${miss.actual_pct>=0?'+':''}${fmt(miss.actual_pct,1)}%</strong><small>The model expected a dry-year loss. Essex corn finished above its trend. Rain and heat alone do not explain every season.</small></div>
- ${ex&&ex.low_bu_ac!=null?`<div class="climate-note mixed"><div class="eyebrow">EXAMPLE · ${ex.year} · DERIVED</div><strong>Corn in ${esc(ex.rotation)} · ${fmt(ex.low_bu_ac,0)} to ${fmt(ex.high_bu_ac,0)} bu/ac</strong><small>${esc(ex.calc)}. A climate scenario range, not a forecast.</small></div>`:''}
- <details><summary>How we know</summary><div class="detail-copy"><p>Error on unseen years ${fmt(c.rmse_model_pct,1)}% for corn against ${fmt(c.rmse_no_change_pct,1)}% for no change. About ${fmt(c.per_100mm_rain_pct,1)}% more corn per extra 100 mm of May to September rain, ${fmt(c.per_100_degree_days_pct,2)}% per 100 extra degree days.</p><p>${esc(d.method)}</p><p>${esc(d.source)}</p><p>${esc(d.limits)}</p></div></details>`;}
+ box.hidden=false;const c=d.crops.corn,miss=c.held_out_2012;
+ const points=Object.entries(d.projection_ranges_pct?.corn||{}).map(([year,v])=>[+year,v.median_pct]);
+ box.innerHTML=`<p>Corn has a climate adjustment. Soybean and wheat keep their historical yields.</p>
+ ${insightChart('corn-climate',points,'%','Corn yield change · median climate scenario')}
+ <div class="insight-numbers"><div><span>Corn error on unseen years</span><strong>${fmt(c.rmse_model_pct,1)}%</strong></div><div><span>Without climate adjustment</span><strong>${fmt(c.rmse_no_change_pct,1)}%</strong></div><div><span>2012 model estimate</span><strong>${fmt(miss.predicted_pct,1)}%</strong></div><div><span>2012 observed change</span><strong>${miss.actual_pct>=0?'+':''}${fmt(miss.actual_pct,1)}%</strong></div></div><p class="insight-note">Derived climate scenario, not a yield guarantee. The model missed 2012.</p>`;
+}
 async function loadSeason(year){try{state.season=await jsonGet(`/api/season/harrow?year=${year}`);}catch(e){state.season=null;}renderSeason();}
 function updateMetrics(){
  const year=selected();
@@ -177,14 +183,23 @@ function cropVisual(name){const n=name.toLowerCase();return n.includes('corn')||
 function sourceAnchors(text){return [...new Set((text||'').match(/https?:\/\/[^\s)]+/g)||[])].map((url,i)=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Source ${i+1} ↗</a>`).join(' · ');}
 function checkLine(c,need){const label={trial:'Trial, 5-year average','long-term trial':'Trial, long-term average','regional average':'Essex regional average, not trial'}[c.label]||c.label;return `<li class="${c.meets?'meets':'misses'}">${esc(label)} ${bu(c.bu_ac)} bu/ac · ${c.meets?'meets':'short by '+fmt(c.shortfall_bu_ac,1)} · ${fmt(c.per_year_average_bu_ac,1)} bu/ac a year over the whole rotation</li>`;}
 function targetAnswer(q){if(!q)return '';return {all:'Yes, every trial figure meets it',some:'Depends on the figure',none:`No, short by ${fmt(q.best_shortfall_bu_ac,1)} bu/ac`,'no evidence':'No trial yield for this crop here'}[q.target_support]||'';}
-function targetBlock(r){const q=r.quantity;if(!q)return '';return `<div class="target-check ${q.target_support==='all'?'ok':q.target_support==='some'?'mixed':'miss'}"><div class="eyebrow">WILL THIS ROTATION MEET MY TARGET OF ${bu(q.need_bu_ac)} BU/AC?</div><strong>${esc(targetAnswer(q))}</strong>${q.checks?.length?`<ul>${q.checks.map(c=>checkLine(c,q.need_bu_ac)).join('')}</ul>`:''}${q.climate_range_check?`<p class="climate-range-check">${esc(q.climate_range_check.text)} <span class="badge-derived">DERIVED</span></p>`:''}<small>Compared with trial history only, in a year you grow ${esc(q.crop==='maize'?'corn':q.crop)} (${esc(q.crop_years||'')} years). Not a forecast.</small></div>`;}
+function targetBlock(r){
+ const q=r.quantity;if(!q)return '';
+ const figures=(q.checks||[]).map(c=>c.bu_ac),lo=Math.min(...figures),hi=Math.max(...figures);
+ return `<div class="target-check ${q.target_support==='all'?'ok':q.target_support==='some'?'mixed':'miss'}"><div class="eyebrow">YOUR TARGET · ${bu(q.need_bu_ac)} BU/AC</div><strong>${esc(targetAnswer(q))}</strong>${figures.length?`<small>Historical yield: ${bu(lo)}${lo!==hi?'–'+bu(hi):''} bu/ac · ${q.checks.every(c=>c.label==='long-term trial')?'long-term average':'trial references'}</small>`:''}<small>Historical comparison is not a guaranteed yield.</small></div>`;
+}
 function rotationCard(r,index){
  const advice=r.water_advice||{},low=advice.low_pct,high=advice.high_pct;
  const valid=Number.isFinite(low)&&Number.isFinite(high),scale=valid?Math.max(100,high):100,lo=valid?Math.max(0,low)/scale*100:0,hi=valid?Math.max(low,high)/scale*100:0,full=100/scale*100;
  const waterCrops=(advice.assessed_crops||[]).map(c=>cropVisual(c)[1].toLowerCase()).join(' & ');
- const quantity=targetBlock(r);
- const clover=r.id.includes('clover');
- return `<article data-rotation-id="${esc(r.id)}" class="rotation-card ${index===0?'top-pick':''}"><div class="rotation-card-top"><span class="rank-pill"><span class="rank-number">${index+1}</span>${r.order_basis==='2012 dry-year order'?'2012 DRY-YEAR ORDER':'BY TRIAL EVIDENCE'}</span><span class="trial-tag">TRIAL-BASED ROTATION</span></div><div class="crop-sequence" aria-label="${esc(r.name)}">${r.crops.map((c,i)=>{const [id,label,cls]=cropVisual(c);return `${i?'<span class="sequence-arrow" aria-hidden="true">→</span>':''}<div class="crop-step ${cls}">${icon(id)}<span>${label}</span></div>`;}).join('')}</div>${clover?'<span class="clover-tag">+ Red clover cover crop</span>':''}<p class="rotation-label">${clover?'A cover crop fits after winter wheat.':r.crops.length===2?'A simple two-crop rotation.':'A diversified crop sequence.'}</p><section class="rain-advice" aria-label="Rain supply compared with crop needs"><div class="water-row"><span>Rain vs ${esc(waterCrops||'crop')} needs</span></div><h3>${valid?`${low}–${high}% covered`:'Not assessed'}</h3><div class="water-track" role="img" aria-label="${esc(advice.meaning||'No water check available')}"><span class="water-base" style="width:${lo}%"></span><span class="water-range" style="left:${lo}%;width:${hi-lo}%"></span>${valid&&high>100?`<span class="water-need-mark" style="left:${full}%"></span>`:''}</div><p class="water-parts">${esc(advice.range_parts||'')}</p><p class="water-meaning">${esc(advice.meaning||'No compatible water check.')}</p><p class="water-action">${esc(advice.action||'')}</p></section><div class="rotation-card-bottom"><span>${r.picked_crop_yield_bu_ac!=null?`Your crop in the trial <strong>${bu(r.picked_crop_yield_bu_ac)} bu/ac</strong>`:`Trial score <strong>${fmt(r.score,1)}</strong>`}</span><span>${esc(state.year)} rain fit check ${fmt(r.planning_score,0)} / 100</span></div>${r.tie_note?`<p class="tie-note">${esc(r.tie_note)}</p>`:''}<p class="score-basis">${esc(r.score_basis||'')}</p>${r.rank_dry?`<p class="dry-rank"><strong>2012 dry-year rank ${r.rank_dry} of ${r.rank_dry_of}</strong> · ${r.order_basis==='2012 dry-year order'?'this year is dry-leaning, so the list uses this order':'this year the list uses the trial evidence order'}. ${esc(r.rank_dry_reason||'')}</p>`:''}${r.climate_adjustment?`<div class="climate-note mixed"><div class="eyebrow">CORN IN ${esc(r.climate_adjustment.year)} · CLIMATE ADJUSTED · DERIVED</div><strong>${fmt(r.climate_adjustment.low_bu_ac,0)} to ${fmt(r.climate_adjustment.high_bu_ac,0)} bu/ac</strong><small>${esc(r.climate_adjustment.calc)}. Modest skill, tested on Essex 1981 to 2025. Not a forecast.</small></div>`:''}${quantity}<details><summary>Why this rotation?</summary><div class="detail-copy"><p>${esc(r.reason)}</p><p>GAEZ suitability index · ${esc(r.gaez_period)}: ${Object.entries(r.suitability||{}).map(([crop,s])=>`${esc(cropVisual(crop)[1])} ${fmt(s.percent,1)}`).join(' · ')}. Period-based, not an annual success probability.</p><p>${esc(r.soil)} ${sourceAnchors(r.soil_source)}</p><p>${esc(advice.range_explanation||'')} Rain only; irrigation and stored soil water are excluded. Winter-wheat water need is not evaluated over May–September.</p><ul>${r.yields.map(y=>`<li>${esc(y.crop)} · ${y.bu_ac==null?'not available':fmt(y.bu_ac,1)+' bu/ac'} · ${esc(y.status)}. ${y.calc&&y.status!=='MISSING'?esc(y.calc)+' ':''}${sourceAnchors(y.source)}</li>`).join('')}</ul>${(r.score_breakdown||[]).length?`<p>Trial score by crop · ${r.score_breakdown.map(b=>`${esc(b.crop)} ${bu(b.trial_bu_ac)} of best ${bu(b.best_bu_ac)} bu/ac = ${fmt(b.index,1)}`).join(' · ')}${(r.score_crops_missing||[]).length?` · not in score ${esc(r.score_crops_missing.join(', '))}`:''}</p>`:''}<p>Order follows trial evidence. Rain fit is a check on this year, not crop success probability. Historical trial index ${fmt(r.score,1)} out of 100. Crops with missing trial yields are left out of the index.</p>${r.score_calc?`<p>How the index is calculated · ${esc(r.score_calc)}</p>`:''}${r.quantity?.calc?`<p>How the target check is calculated · ${esc(r.quantity.calc)}</p>`:''}${r.revenue_calc?`<p>How revenue is calculated · ${esc(r.revenue_calc)}</p>`:''}${r.revenue?`<p>Historical-price reference ${esc(r.revenue)}. Gross revenue, not profit or future earnings.</p>`:''}</div></details></article>`;
+ return `<article data-rotation-id="${esc(r.id)}" class="rotation-card ${index===0?'top-pick':''}">
+ <div class="rotation-card-top"><span class="rank-pill"><span class="rank-number">${index+1}</span>${r.order_basis==='2012 dry-year order'?'DRY-YEAR RANK':'TRIAL RANK'}</span><span class="trial-tag">HISTORICAL EVIDENCE</span></div>
+ <div class="crop-sequence" aria-label="${esc(r.name)}">${r.crops.map((c,i)=>{const [id,label,cls]=cropVisual(c);return `${i?'<span class="sequence-arrow" aria-hidden="true">→</span>':''}<div class="crop-step ${cls}">${icon(id)}<span>${label}</span></div>`;}).join('')}</div>
+ ${r.id.includes('clover')?'<span class="clover-tag">+ Red clover cover crop</span>':''}
+ ${targetBlock(r)}
+ <section class="rain-advice" aria-label="Rain supply compared with crop needs"><div class="water-row"><span>Rain vs ${esc(waterCrops||'crop')} needs</span></div><h3>${valid?`${low}–${high}% covered`:'Not assessed'}</h3><div class="water-track" role="img" aria-label="${esc(advice.meaning||'No water check available')}"><span class="water-base" style="width:${lo}%"></span><span class="water-range" style="left:${lo}%;width:${hi-lo}%"></span>${valid&&high>100?`<span class="water-need-mark" style="left:${full}%"></span>`:''}</div><p class="water-meaning">${valid?`${low}–${high} mm of rain for every 100 mm needed.`:'No compatible water check.'}</p><p class="water-action">${esc(advice.action||'')}</p></section>
+ ${!r.quantity&&r.picked_crop_yield_bu_ac!=null?`<div class="rotation-card-bottom"><span>Your crop in the trial</span><strong>${bu(r.picked_crop_yield_bu_ac)} bu/ac</strong></div>`:''}
+ <details><summary>Evidence &amp; details</summary><div class="detail-copy"><p>${esc(state.recommendations?.season_outlook?.text||r.reason)}</p><p>Yield-target comparisons take priority. Historical yields do not change with the year.</p>${r.tie_note?`<p class="tie-note">${esc(r.tie_note)}</p>`:''}<p>${esc(r.score_basis||'')}</p><p>${esc(advice.range_parts||'')}</p><p>Suitability · ${esc(r.gaez_period)}: ${Object.entries(r.suitability||{}).map(([crop,v])=>`${esc(cropVisual(crop)[1])} ${fmt(v.percent,1)}/100`).join(' · ')}. Not a success probability.</p><p>${esc(r.soil)} ${sourceAnchors(r.soil_source)}</p><ul>${(r.yields||[]).map(y=>`<li>${esc(y.crop)} · ${y.bu_ac==null?'not available':bu(y.bu_ac)+' bu/ac'} · ${esc(y.status)} ${sourceAnchors(y.source)}</li>`).join('')}</ul>${r.quantity?.checks?.length?`<ul>${r.quantity.checks.map(c=>checkLine(c,r.quantity.need_bu_ac)).join('')}</ul>`:''}${r.score_calc?`<p>${esc(r.score_calc)}</p>`:''}${r.quantity?.calc?`<p>${esc(r.quantity.calc)}</p>`:''}${r.revenue?`<p>${esc(r.revenue)}. Historical-price gross revenue, not profit.</p>`:''}</div></details></article>`;
 }
 function markUpdating(){
  $('panel-body').setAttribute('aria-busy','true');$('panel-body').classList.add('updating');
@@ -204,42 +219,34 @@ function showOption(index,direction=1){
  $('option-dots').querySelectorAll('button').forEach(button=>button.onclick=()=>showOption(+button.dataset.option,+button.dataset.option>state.optionIndex?1:-1));
  animateContent($('panel-body'),direction);
 }
-function renderTargetSummary(rows){const box=$('target-summary');if(!box)return;
- if(state.mode!=='priority'){box.hidden=true;return;}
- box.hidden=false;
- if(!state.crop){box.innerHTML='<div class="eyebrow">WILL THIS ROTATION MEET MY TARGET?</div><p>Pick a crop, then add a bu/ac target. Every option answers it at once.</p>';return;}
- if(state.target===null){box.innerHTML='<div class="eyebrow">WILL THIS ROTATION MEET MY TARGET?</div><p>Add a bu/ac target above to check every option at once.</p>';return;}
- box.innerHTML=`<div class="eyebrow">WILL THIS ROTATION MEET ${bu(state.target)} BU/AC?</div><ul>${(rows||[]).map(r=>`<li><span>${esc(r.name)}</span><strong>${esc(targetAnswer(r.quantity))}</strong></li>`).join('')}</ul>${targetPosition()}<small>Trial history only. Not a forecast.</small>`;}
-// Where the target falls among the best trial figure of each rotation, on one line.
-function targetPosition(){
- const p=state.recommendations?.target_position;if(!p||!p.figures?.length)return '';
- const values=[...p.figures.map(f=>f.bu_ac),p.target_bu_ac],min=Math.min(...values),max=Math.max(...values),pad=(max-min)*0.08||5,lo=Math.max(0,min-pad),hi=max+pad;
- const x=v=>((v-lo)/(hi-lo)*100).toFixed(1);
- return `<div class="target-position" role="img" aria-label="${esc(p.text)}"><div class="target-track">${p.figures.map(f=>`<span class="target-fig ${f.meets?'meets':'misses'}" style="left:${x(f.bu_ac)}%" title="${esc(f.name)} ${bu(f.bu_ac)} bu/ac"></span>`).join('')}<span class="target-mark" style="left:${x(p.target_bu_ac)}%"></span></div><div class="target-scale"><span>${fmt(lo,0)}</span><span>bu/ac · dots are rotations, the line is your target</span><span>${fmt(hi,0)}</span></div><p>${esc(p.text)}</p></div>`;
+function renderTargetSummary(){
+ // The selected option already shows its target answer. Avoid a duplicate list.
+ $('target-summary').hidden=true;
 }
+
 function renderRecommendations(){
  const data=state.recommendations;
  $('recommendation-year').textContent=state.mode==='others'?'SUITABILITY ONLY':`${state.year} OUTLOOK`;
  $('option-nav').hidden=true;
  if(state.mode==='others'){renderOtherCrops();return;}
- if(state.mode==='priority'&&!state.crop){renderTargetSummary([]);$('results-count').textContent='YOUR CROP COMES FIRST';$('panel-body').innerHTML=`<div class="empty-state">${icon('target')}<strong>Start with your priority.</strong>Choose a crop above. Rotations show right away, ordered by trial yield. The target check is optional.</div>`;return;}
+ if(state.mode==='priority'&&!state.crop){renderTargetSummary([]);$('results-count').textContent='YOUR CROP COMES FIRST';$('panel-body').innerHTML=`<div class="empty-state">${icon('target')}<strong>Choose a crop.</strong>Add a yield target if you have one.</div>`;return;}
  if(!data)return;
  if(data.status==='unavailable'){$('results-count').textContent='OUTLOOK UNAVAILABLE';$('panel-body').innerHTML=`<div class="empty-state">${icon('info')}<strong>No invented predictions.</strong>${esc(data.message)}<button class="primary-button" data-view-history>Explore 2025 history</button></div>`;$('panel-body').querySelector('[data-view-history]').onclick=()=>setYear(2025);return;}
- const rows=data.rotations;if(data.season_outlook){$('timeline-note').innerHTML=`<strong>${esc(data.season_outlook.text)}</strong> ${esc('Harrow trial yields do not change with the year. The year decides two things. If NASA rain puts May to September in the driest third of 1991-2020, the list uses the 2012 dry-year order; otherwise it uses the trial evidence order. The year also changes the rain check and, from 2026, the corn climate range.')}`;}{const note=$('panel-note');const text=[data.rotation_count_note,state.mode==='priority'?data.year_note:null].filter(Boolean).join(' ');note.textContent=text;note.hidden=!text;}$('results-count').textContent=state.mode==='priority'?(state.target?`${rows.length} OPTIONS · CHECKED AGAINST ${state.target} BU/AC`:`${rows.length} OPTIONS BY TRIAL YIELD · NO TARGET SET`):`${rows.length} OPTIONS · ${data.season_outlook?.dry_leaning?'2012 DRY-YEAR ORDER':'BY TRIAL EVIDENCE'}`;renderTargetSummary(rows);
+ const rows=data.rotations;{const note=$('panel-note');const text=data.season_outlook?`${state.year} · ${data.season_outlook.dry_leaning?'Dry-leaning · drought evidence first':'Typical rain · trial evidence first'}`:'Historical trial evidence';note.textContent=text;note.hidden=!text;}$('results-count').textContent=state.mode==='priority'?(state.target?`${rows.length} OPTIONS · CHECKED AGAINST ${state.target} BU/AC`:`${rows.length} OPTIONS FOR YOUR CROP`):`${rows.length} ROTATION OPTIONS`;renderTargetSummary(rows);
  if(rows.length){$('option-nav').hidden=false;showOption(state.optionIndex);}
  else $('panel-body').innerHTML='<div class="empty-state"><strong>No supported rotation.</strong>Try a different crop or reset your priority.</div>';
 }
 function cropGroup(c){if((c.group||'').startsWith('perennial')||c.ontario_status==='No')return 'collapsed';return 'open';}
-function grownHere(c){return /^(Yes|Partly|Emerging|Pilots)/.test(c.ontario_status||'');}
-function otherCropCard(c){const g=c.gaez,k=c.kaggle_climate_check;return `<article class="crop-card"><div class="crop-card-head"><strong>${esc(c.crop)}</strong><span class="trial-tag">SUITABILITY ONLY</span></div><dl><dt>Grown in Ontario</dt><dd>${esc(c.ontario_status)}</dd><dt>FAO GAEZ now and 2035</dt><dd>${g?`${fmt(g.si_2001_2020,0)} and ${fmt(g.si_2021_2040_ssp370,0)} out of 100`:'Not available'}</dd><dt>Kaggle climate check</dt><dd>${k?`${k.inside_count} of ${k.of} inside`:'Not in Kaggle'}</dd><dt>Rotation crop</dt><dd>${esc(c.rotation_crop)}</dd></dl>${g?.note?`<p class="crop-advice">GAEZ note · ${esc(g.note)}</p>`:''}${c.evidence_note?`<p class="crop-advice">${esc(c.evidence_note)}</p>`:''}<details><summary>Sources and notes</summary><div class="detail-copy">${g?.note?`<p>${esc(g.note)}</p>`:''}${c.ontario_source?`<p>${esc(c.ontario_source.replace(/https?:\/\/\S+/g,''))} ${sourceAnchors(c.ontario_source)}</p>`:''}${c.evidence_source?`<p>${sourceAnchors(c.evidence_source)}</p>`:''}${k?`<p>${esc(k.note)}</p>`:''}<p>${esc(c.label)}</p></div></details></article>`;}
+
+function otherCropCard(c){const g=c.gaez;return `<article class="crop-card"><div class="crop-card-head"><strong>${esc(c.crop)}</strong><span class="trial-tag">SUITABILITY ONLY</span></div><dl><dt>Ontario growing</dt><dd>${esc(c.ontario_status)}</dd><dt>Current suitability</dt><dd>${g?`${fmt(g.si_2001_2020,0)} / 100`:'Not available'}</dd><dt>2035 suitability</dt><dd>${g?`${fmt(g.si_2021_2040_ssp370,0)} / 100`:'Not available'}</dd></dl><details><summary>Growing cautions &amp; sources</summary><div class="detail-copy">${g?.note?`<p>${esc(g.note)}</p>`:''}${c.evidence_note?`<p>${esc(c.evidence_note)}</p>`:''}${sourceAnchors(c.ontario_source)} ${sourceAnchors(c.evidence_source)}<p>GAEZ climate-period index, not a success rate. No verified rotation yield for this crop.</p></div></details></article>`;}
+
 function renderOtherCrops(){
  $('option-nav').hidden=true;$('target-summary').hidden=true;$('panel-note').hidden=true;
  const d=state.crops;if(!d){$('panel-body').innerHTML='<div class="empty-state"><strong>Other crops are loading.</strong></div>';return;}
- const f=state.cropFilter,list=d.crops.filter(c=>(!f.grown||grownHere(c))&&(!f.gaez||(c.gaez&&c.gaez.si_2001_2020>=f.gaez)));
+ const f=state.cropFilter,list=d.crops.filter(c=>!f.gaez||(c.gaez&&c.gaez.si_2001_2020>=f.gaez));
  const open=list.filter(c=>cropGroup(c)==='open'),closed=list.filter(c=>cropGroup(c)==='collapsed');
  $('results-count').textContent=`${list.length} OF ${d.crops.length} CROPS`;
- $('panel-body').innerHTML=`<div class="crop-filters"><label><input type="checkbox" id="filter-grown" ${f.grown?'checked':''}> Grown in Ontario</label><label>GAEZ suitability <select id="filter-gaez"><option value="0">Any</option><option value="50" ${f.gaez===50?'selected':''}>50 or more</option><option value="75" ${f.gaez===75?'selected':''}>75 or more</option></select></label></div><p class="crop-note">Rotation picks stay corn, soybean and wheat, the crops with Ontario trial yields. These crops show suitability only, with no bushels or revenue.</p>${open.map(otherCropCard).join('')||'<p class="crop-note">No annual crops match these filters.</p>'}${closed.length?`<details class="crop-collapsed"><summary>Perennials and crops not grown here (${closed.length})</summary>${closed.map(otherCropCard).join('')}</details>`:''}`;
- $('filter-grown').onchange=e=>{state.cropFilter.grown=e.target.checked;renderOtherCrops();};
+ $('panel-body').innerHTML=`<div class="crop-filters"><label for="filter-gaez">Current suitability</label><select id="filter-gaez" aria-label="GAEZ suitability"><option value="0">Any</option><option value="50" ${f.gaez===50?'selected':''}>50 or more</option><option value="75" ${f.gaez===75?'selected':''}>75 or more</option></select></div><p class="crop-note">Suitability index, not yield or chance of success.</p>${open.map(otherCropCard).join('')||'<p class="crop-note">No annual crops match these filters.</p>'}${closed.length?`<details class="crop-collapsed"><summary>Perennials and crops not grown here (${closed.length})</summary>${closed.map(otherCropCard).join('')}</details>`:''}`;
  $('filter-gaez').onchange=e=>{state.cropFilter.gaez=Number(e.target.value);renderOtherCrops();};
 }
 async function loadRecommendations(){
@@ -264,11 +271,11 @@ async function loadRecommendations(){
 }
 function setMode(mode){
  pause();state.mode=mode;const priority=mode==='priority',others=mode==='others';
- $('priority-form').hidden=!priority;$('target-summary').hidden=!priority;
+ $('priority-form').hidden=!priority;$('target-summary').hidden=true;
  ['recommendations','priority','others'].forEach(name=>{const active=name===mode;$(`tab-${name}`).classList.toggle('active',active);$(`tab-${name}`).setAttribute('aria-selected',String(active));$(`tab-${name}`).tabIndex=active?0:-1;});
  $('panel-body').setAttribute('aria-labelledby',`tab-${mode}`);
- $('panel-title').textContent=priority?'Will this rotation meet my target?':others?'What else could grow here?':'Rotations that held up in the trial.';
- $('panel-description').textContent=priority?'Pick a crop. Rotations with it show right away, ordered by its trial yield. A bu/ac target is optional and adds a check against trial history.':others?'Suitability only. No bushels, rotations or revenue for these crops.':'Ordered by trial evidence, or by the 2012 dry-year order when NASA rain says the year is dry-leaning. We do not predict bushels.';
+ $('panel-title').textContent=priority?'Plan around your crop.':others?'Other crops.':'Compare your rotations.';
+ $('panel-description').textContent=priority?'Choose a crop and an optional yield target.':others?'Explore climate suitability.':'Compare rotations for the selected year.';
  updateTargetControl();
  loadRecommendations();
 }
@@ -278,8 +285,8 @@ function renderSourceTab(tab='data'){
  const heading=state.activeLocation.id!=='harrow'?'Harrow pilot sources':state.year<=2025?'Observed history':'Climate scenarios';
  const content={
   data:`<section class="source-section"><h3>${heading} · ${state.year}</h3><p>${state.activeLocation.id!=='harrow'?'No datasets are connected for the selected location. These links describe the Harrow pilot. ':''}Temperature, rain and humidity: May–September. Soil moisture: July, 0–10 cm. Soil profile: static regional reference.</p><ul class="source-links">${state.timeline.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name)} <span>↗</span></a></li>`).join('')}</ul><p class="source-small">The focus outline stays the same for comparison. POWER uses a 0.5° × 0.625° grid; GLDAS and NEX use 0.25°. The smaller display outline does not increase data resolution.</p></section>`,
-  ranking:`<section class="source-section"><h3>Why an option comes first</h3><p>${esc(state.recommendations?.ranking_summary||'Trial evidence first, then your crop and target. Rain coverage and soil pH are checks.')}</p><p>A repeated option can be a genuine result when years remain in the same water-limited range. No options are shuffled just to create variation.</p><p>Rain coverage compares regional rain with FAO crop water-need ranges. A range of 50–89% means roughly 50–89 mm supplied for each 100 mm needed. It is not a success rate.</p></section>`,
-  limits:`<section class="source-section"><h3>What the data cannot promise</h3><ul><li>Future years are climate scenarios, not weather forecasts. Ranges show five-model spread, not probabilities.</li><li>Winter-wheat water is unassessed in the May–September window. Rain checks omit irrigation and soil storage.</li><li>Trial yields refer to Woodslee, about 26 km away. Soil values are regional estimates, not field tests.</li><li>Order follows trial evidence first. Rain fit is a check. Year-specific heat damage and repeat-cropping penalties are not independently calibrated.</li><li>No future soil moisture, field-level heatmap or annual crop yield is invented.</li></ul></section>`
+  ranking:`<section class="source-section"><h3>Why an option comes first</h3><p>${esc(state.recommendations?.season_outlook?.text||'NASA rain selects trial evidence order or dry-year order. Yield-target comparisons take priority.')}</p><p>Yield-target comparisons take priority. Dry-leaning years use drought evidence first; other years use historical trial yields. A repeated option can be the correct result.</p><p>Rain coverage compares regional rain with FAO crop water-need ranges. A range of 50–89% means roughly 50–89 mm supplied for each 100 mm needed. It is not a success rate.</p></section>`,
+  limits:`<section class="source-section"><h3>What the data cannot promise</h3><ul><li>Future years are climate scenarios, not weather forecasts. Ranges show five-model spread, not probabilities.</li><li>Winter-wheat water is unassessed in the May–September window. Rain checks omit irrigation and soil storage.</li><li>Trial yields refer to Woodslee, about 26 km away. Soil values are regional estimates, not field tests.</li><li>Order follows the selected year’s rain classification and your crop target. Year-specific heat damage and repeat-cropping penalties are not independently calibrated.</li><li>No future soil moisture, field-level heatmap or annual crop yield is invented.</li></ul></section>`
  };
  $('sources-content').innerHTML=content[tab];$('sources-content').scrollTop=0;
 }
