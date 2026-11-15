@@ -1,11 +1,38 @@
 {
   "field_id": "harrow",
   "name": "Harrow, Ontario pilot field",
-  "lat": 42.0356,
-  "lon": -82.9183,
-  "coordinates_status": "UNVERIFIED until Vedant confirms. Provided by Ved.",
-  "soil_type": "Brookston clay loam",
+  "lat": 42.0337,
+  "lon": -82.9287,
+  "coordinates_status": "Cropland check: ESA WorldCover 2021 shows 95.4 percent cropland in the 300 m square around this point. Not a surveyed farm field.",
+  "previous_point": {
+    "lat": 42.0356,
+    "lon": -82.9183,
+    "note": "Harrow town, built-up on ESA WorldCover. Moved 0.9 km west on Sat Nov 14."
+  },
+  "data_point_note": "NASA POWER, GLDAS and IMERG data were fetched at 42.0356, -82.9183. The field point is in the same POWER, GLDAS and IMERG cells and the same GAEZ pixel, so those values apply unchanged.",
+  "polygon": [
+    [
+      42.03235,
+      -82.93051
+    ],
+    [
+      42.03235,
+      -82.92689
+    ],
+    [
+      42.03505,
+      -82.92689
+    ],
+    [
+      42.03505,
+      -82.93051
+    ]
+  ],
+  "polygon_status": "SAMPLE",
+  "polygon_note": "SAMPLE 300 m square of cropland (ESA WorldCover 2021), centred on 42.0337, -82.9287. Not a surveyed field boundary.",
+  "worldcover_source": "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_N42W084_Map.tif",
+  "soil_type": "Brookston clay loam (trial description)",
   "trial_file": "data/seed/harrow_trial_yields.csv",
-  "price_file": "none chosen",
-  "price_status": "UNVERIFIED. No price source or date chosen. Vedant picks one (TASKS VS1)."
+  "price_file": "data/seed/model2_prices.json",
+  "price_status": "Grain Farmers of Ontario monthly averages, September 2026 (docs/EVIDENCE.md)."
 }

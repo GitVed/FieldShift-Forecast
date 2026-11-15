@@ -81,22 +81,28 @@ def load_gaez(path=GAEZ_CSV, scenario=GAEZ_BASELINE_SCENARIO):
 
 
 def water_check(crop, profile):
-    """May-Sep rain as a share of the FAO crop water need range."""
-    rain = profile.get("rain_mm")
+    """May-Sep rain as a share of the FAO crop water need range.
+    Uses every rain source in the profile (POWER, and IMERG when present), so the
+    result is a low-to-high range across sources and across the FAO need range."""
+    rains = {k: profile.get(k) for k in ("rain_mm", "rain_mm_imerg") if profile.get(k) is not None}
     lo, hi = FAO_WATER_NEED_MM[crop]
     base = {"need_mm": [lo, hi], "source": FAO_WATER_SOURCE,
+            "rain_by_source_mm": {("POWER" if k == "rain_mm" else "IMERG"): round(v, 1) for k, v in rains.items()},
             "note": "Rain only. Ignores soil water storage. FAO need is crop evapotranspiration "
                     "over the whole growing period."}
     if crop == "wheat":
-        return {**base, "rain_mm": rain, "covers_pct": None,
+        return {**base, "rain_mm": profile.get("rain_mm"), "covers_pct": None,
                 "status": "not computed",
                 "note": ("Winter wheat is seeded late Aug to mid Oct and harvested late June to mid July "
                          "(OMAFRA 2017, as supplied), so the May-Sep corn and soybean window does not fit it.")}
-    if rain is None:
+    if not rains:
         return {**base, "rain_mm": None, "covers_pct": None, "status": "no rain data"}
-    return {**base, "rain_mm": round(rain, 1),
-            "covers_pct": [round(100 * rain / hi), round(100 * rain / lo)],
-            "status": "rain covers need" if rain >= lo else "rain below need"}
+    low_rain, high_rain = min(rains.values()), max(rains.values())
+    return {**base, "rain_mm": round(low_rain, 1),
+            "covers_pct": [round(100 * low_rain / hi), round(100 * high_rain / lo)],
+            "calc": (f"low = {low_rain:.0f} mm / {hi} mm need = {100 * low_rain / hi:.0f}%; "
+                     f"high = {high_rain:.0f} mm / {lo} mm need = {100 * high_rain / lo:.0f}%"),
+            "status": "rain covers need" if low_rain >= lo else "rain below need in at least one source"}
 
 
 def ph_check(crop, profile):

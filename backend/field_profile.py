@@ -30,7 +30,7 @@ SEED = ROOT / "data" / "seed"
 
 CELL = "power_harrow_point"
 SEASON_MONTHS = (5, 6, 7, 8, 9)
-SEASON_LABEL = "May-Sep (window UNVERIFIED)"
+SEASON_LABEL = "May-Sep (corn and soybean window)"
 BASELINE_YEARS = range(1991, 2021)
 DRY_YEAR = 2012
 CHECK_DRY_YEAR = 2021
@@ -114,21 +114,151 @@ def gldas_july(depth=("0", "10")):
     return out
 
 
-SOIL_FROM_HWSD2 = ("ph", "sand", "silt", "clay")
+SOIL_VARS = ("ph", "sand", "silt", "clay")
+SOILGRIDS_FIELD = "soilgrids_field.csv"   # WCS pre-fetch at the cropland field point, 0-30 cm
 
 
 def soil():
-    """Topsoil (0-20 cm) texture and pH from HWSD2. SoilGrids rows are all
-    invalid at this point (Dev's quality flags). HWSD2 organic carbon and
-    nitrogen are not used; soil carbon comes from the trial (SOIL_CARBON)."""
+    """Topsoil texture and pH. SoilGrids (250 m, modelled) at the cropland field
+    point, depth-weighted 0-30 cm. Falls back to HWSD2 (1 km, regional estimate)
+    if that file is missing. Organic carbon and nitrogen are not used here;
+    soil carbon comes from the trial (SOIL_CARBON)."""
+    out = {}
+    path = SEED / SOILGRIDS_FIELD
+    if path.exists():
+        acc = {}
+        for r in _rows(SOILGRIDS_FIELD):
+            if r["variable"] in SOIL_VARS and r["quality_flag"] == "valid" and r["value"]:
+                w = int(r["depth_bottom_cm"]) - int(r["depth_top_cm"])
+                a = acc.setdefault(r["variable"], [0.0, 0, r["unit"], r["cell_id"]])
+                a[0] += float(r["value"]) * w; a[1] += w
+        for var, (total, weight, unit, cell) in acc.items():
+            if weight == 30:
+                out[var] = _item(total / weight, unit, "soilgrids_wcs", "0-30 cm, depth-weighted",
+                                 f"ISRIC SoilGrids 250 m at the field point ({cell}). Modelled, not a lab test.",
+                                 label="CACHED (modelled)")
+    if len(out) == len(SOIL_VARS):
+        return out
+    return soil_hwsd2()
+
+
+def soil_hwsd2():
+    """HWSD2 topsoil (0-20 cm), regional mapping unit. Cross-check only."""
     out = {}
     for r in _rows("hwsd_soil_harrow.csv"):
         if (r["depth_top_cm"] == "0" and r["quality_flag"] == "regional_estimate" and r["value"]
-                and r["variable"] in SOIL_FROM_HWSD2):
+                and r["variable"] in SOIL_VARS):
             out[r["variable"]] = _item(float(r["value"]), r["unit"], r["source_id"], "0-20 cm",
                                        "FAO HWSD2 regional mapping unit, not a field soil test",
                                        label="CACHED (regional estimate)")
     return out
+
+
+# ---------- daily NASA data: POWER and IMERG ----------
+
+IMERG_BASELINE_YEARS = range(2001, 2021)   # IMERG file starts mid-1998
+DRY_DAY_MM = 1.0       # ETCCDI dry day: precipitation below 1 mm
+HEAVY_RAIN_MM = 10.0   # ETCCDI R10mm: days with at least 10 mm
+GDD_BASE_C = 10.0      # degree days above 10 C from the daily mean
+
+
+def _daily(path, column):
+    import datetime as dt
+    lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
+    start = lines.index("-END HEADER-") + 1
+    out = {}
+    for r in csv.DictReader(lines[start:]):
+        v = float(r[column])
+        if v > -900:
+            out[dt.date(int(r["YEAR"]), 1, 1) + dt.timedelta(days=int(r["DOY"]) - 1)] = v
+    return out
+
+
+_DAILY = {}
+
+
+def daily(name):
+    if name not in _DAILY:
+        _DAILY[name] = {
+            "power_rain": lambda: _daily("data/seed/power_harrow_daily_1981_2025.csv", "PRECTOTCORR"),
+            "power_temp": lambda: _daily("data/seed/power_harrow_daily_1981_2025.csv", "T2M"),
+            "imerg_rain": lambda: _daily("data/source/imerg_harrow_daily_19980601_20251231.csv", "IMERG_PRECTOT"),
+        }[name]()
+    return _DAILY[name]
+
+
+def _season_days(series, year):
+    vals = [v for d, v in sorted(series.items()) if d.year == year and d.month in SEASON_MONTHS]
+    return vals if len(vals) == 153 else None   # May 1 to Sep 30, complete only
+
+
+def season_stats(series, year):
+    vals = _season_days(series, year)
+    if vals is None:
+        return None
+    longest = run = 0
+    for v in vals:
+        run = run + 1 if v < DRY_DAY_MM else 0
+        longest = max(longest, run)
+    return {"rain_mm": sum(vals), "dry_spell_days": longest, "heavy_rain_days": sum(v >= HEAVY_RAIN_MM for v in vals)}
+
+
+def degree_days(year):
+    vals = _season_days(daily("power_temp"), year)
+    return None if vals is None else sum(max(t - GDD_BASE_C, 0.0) for t in vals)
+
+
+def stress_facts(years, label):
+    """May-Sep stress facts from both NASA daily sources, as plain measured facts."""
+    def mean(xs):
+        xs = [x for x in xs if x is not None]
+        return round(statistics.mean(xs), 1) if xs else None
+    out = {"label": label, "window": "May 1 to Sep 30",
+           "method": ("Dry spell: longest run of days with under 1 mm (ETCCDI dry-day threshold). Heavy rain: "
+                      "days with at least 10 mm (ETCCDI R10mm). Degree days: sum of daily mean temperature "
+                      "above 10 C."), "sources": {}}
+    for src, series, yrs in (("power", daily("power_rain"), years),
+                             ("imerg", daily("imerg_rain"), [y for y in years if y >= 1999] or years)):
+        if src == "imerg" and len(years) > 1:
+            yrs = list(IMERG_BASELINE_YEARS)
+        stats = [season_stats(series, y) for y in yrs]
+        out["sources"][src] = {
+            "years": f"{yrs[0]}-{yrs[-1]}" if len(yrs) > 1 else str(yrs[0]),
+            "rain_mm": mean(s and s["rain_mm"] for s in stats),
+            "dry_spell_days": mean(s and s["dry_spell_days"] for s in stats),
+            "heavy_rain_days": mean(s and s["heavy_rain_days"] for s in stats),
+        }
+    out["degree_days_above_10c"] = mean(degree_days(y) for y in years)
+    return out
+
+
+def imerg_monthly():
+    out = {}
+    for r in _rows("imerg_precip_harrow.csv"):
+        if r["variable"] == "precipitation" and r["quality_flag"] == "valid" and r["value"]:
+            out[(int(r["date"][:4]), int(r["date"][5:7]))] = float(r["value"])
+    return out
+
+
+def gldas_july_layers(years):
+    """July volumetric soil moisture for the root-zone layers, mean over years."""
+    out = {}
+    for depth in (("0", "10"), ("10", "40"), ("40", "100")):
+        sm = gldas_july(depth)
+        vals = [sm[y] for y in years if y in sm]
+        out[f"{depth[0]}-{depth[1]} cm"] = round(statistics.mean(vals), 3) if vals else None
+    return out
+
+
+def data_quality():
+    """Valid-row counts from Dev's quality report, for the files the model uses."""
+    import json
+    used = ("power_t2m_harrow_1981_2025.csv", "power_precip_harrow_1981_2025.csv",
+            "power_humidity_harrow_1981_2025.csv", "imerg_precip_harrow.csv", "gldas_soil_moisture_harrow.csv")
+    rows = {r["section"]: r["metadata"] for r in _rows("quality_report_all.csv")}
+    datasets = json.loads(json.loads(rows["datasets"])) if rows["datasets"].startswith('"') else json.loads(rows["datasets"])
+    return {name: {"rows": d.get("rows"), "usable_rows": d.get("usable_rows"), "verdict": d.get("verdict")}
+            for name, d in datasets.items() if name in used}
 
 
 def temperature_trend():
@@ -160,6 +290,10 @@ def _climate(years, label_years):
                                f"annual, {label_years}"),
         "rain_mm": _item(_over_years(P, years, SEASON_MONTHS, "sum"), "mm", "power_monthly",
                          f"{SEASON_LABEL} total, {label_years}"),
+        "rain_mm_imerg": _item(_over_years(imerg_monthly(), years if len(years) == 1 else list(IMERG_BASELINE_YEARS),
+                                           SEASON_MONTHS, "sum"), "mm", "imerg_daily",
+                               f"{SEASON_LABEL} total, " + (label_years if len(years) == 1 else "2001-2020 mean"),
+                               "GPM IMERG, 0.1 degree. Second NASA rain source, cross-checks POWER."),
         "rain_annual_mm": _item(_over_years(P, years, range(1, 13), "sum"), "mm", "power_monthly",
                                 f"annual total, {label_years}"),
         "humidity_pct": _item(_over_years(H, years, SEASON_MONTHS, "mean"), "%", "power_monthly",
@@ -197,10 +331,16 @@ def build_scenarios():
             future[key]["note"] = "No directional temperature trend, so no shift applied."
     rain_note = (f"Rain not extrapolated: Dev's rain trend verdict is {rain_trend_verdict()}. "
                  f"Uses the {DRY_YEAR} value.")
-    for key in ("rain_mm", "rain_annual_mm"):
+    for key in ("rain_mm", "rain_annual_mm", "rain_mm_imerg"):
         future[key]["note"] = rain_note
     future["soil_moisture_july"]["note"] = f"Not projected. Uses the {DRY_YEAR} value."
 
+    stress = {"normal": stress_facts(base_years, "1991-2020 mean (IMERG 2001-2020)"),
+              "dry": stress_facts([DRY_YEAR], str(DRY_YEAR))}
+    stress["2035_dry"] = {**stress["dry"], "label": f"{DRY_YEAR} values, not projected"}
+    root = {"normal": {"years": "2000-2020 mean", **gldas_july_layers(GLDAS_BASELINE_YEARS)},
+            "dry": {"years": str(DRY_YEAR), **gldas_july_layers([DRY_YEAR])}}
+    root["2035_dry"] = {**root["dry"], "years": f"{DRY_YEAR}, not projected"}
     out = {}
     for sid, clim, title in (("normal", normal, "Normal year"), ("dry", dry, f"Dry year ({DRY_YEAR} replay)"),
                              ("2035_dry", future, f"{TARGET_YEAR} dry-year stress test")):
@@ -213,6 +353,7 @@ def build_scenarios():
             "title": title,
             "temp_c": clim["temp_c"]["value"],
             "rain_mm": clim["rain_mm"]["value"],
+            "rain_mm_imerg": clim["rain_mm_imerg"]["value"],
             "humidity_pct": clim["humidity_pct"]["value"],
             "soil_moisture": clim["soil_moisture_july"]["value"],
             "ph": soil_items.get("ph", {}).get("value"),
@@ -223,6 +364,8 @@ def build_scenarios():
             "silt": soil_items.get("silt", {}).get("value"),
             "clay": soil_items.get("clay", {}).get("value"),
             "provenance": prov,
+            "stress": stress[sid],
+            "root_zone_july_m3m3": root[sid],
         }
         out[sid] = profile
     return out

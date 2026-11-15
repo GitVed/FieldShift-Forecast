@@ -47,7 +47,7 @@ class Model1Tests(unittest.TestCase):
     def test_water_check(self):
         w = suitability.water_check("maize", {"rain_mm": 400})
         self.assertEqual(w["covers_pct"], [50, 80])           # 400/800, 400/500
-        self.assertEqual(w["status"], "rain below need")
+        self.assertEqual(w["status"], "rain below need in at least one source")
         self.assertIsNone(suitability.water_check("wheat", {"rain_mm": 400})["covers_pct"])
 
     def test_no_unsourced_ranges_left(self):
@@ -76,9 +76,20 @@ class ProfileTests(unittest.TestCase):
         self.assertAlmostEqual(self.s["2035_dry"]["temp_c"], round(self.s["dry"]["temp_c"] + shift, 3), places=2)
         self.assertEqual(self.s["2035_dry"]["rain_mm"], self.s["dry"]["rain_mm"])
 
-    def test_soil_is_hwsd_regional_estimate(self):
-        self.assertEqual(self.s["normal"]["ph"], 6.7)
-        self.assertIn("regional", self.s["normal"]["provenance"]["soil_ph"]["label"])
+    def test_soil_is_soilgrids_at_the_field(self):
+        p = self.s["normal"]
+        self.assertEqual(p["ph"], 6.6)                       # SoilGrids 0-30 cm at the cropland point
+        self.assertIn("modelled", p["provenance"]["soil_ph"]["label"])
+        self.assertAlmostEqual(p["sand"] + p["silt"] + p["clay"], 100, delta=0.5)
+        self.assertEqual(field_profile.soil_hwsd2()["ph"]["value"], 6.7)   # HWSD2 kept as cross-check
+
+    def test_two_nasa_rain_sources_and_stress_facts(self):
+        n, d = self.s["normal"], self.s["dry"]
+        self.assertIsNotNone(n["rain_mm_imerg"])
+        self.assertLess(d["rain_mm_imerg"], n["rain_mm_imerg"])       # IMERG agrees 2012 was drier
+        self.assertGreater(d["stress"]["degree_days_above_10c"], n["stress"]["degree_days_above_10c"])
+        self.assertEqual(set(d["stress"]["sources"]), {"power", "imerg"})
+        self.assertLess(d["root_zone_july_m3m3"]["40-100 cm"], n["root_zone_july_m3m3"]["40-100 cm"])
 
     def test_soil_carbon_from_trial_not_hwsd(self):
         p = self.s["normal"]
@@ -100,7 +111,9 @@ class ApiTests(unittest.TestCase):
     def test_pilot_has_fixture_keys(self):
         j = self.c.get("/api/pilot").json()
         self.assertTrue(set(FIXTURE["pilot"]) <= set(j))
-        self.assertEqual(j["center"], {"lat": 42.0356, "lon": -82.9183})
+        self.assertEqual(j["center"], {"lat": 42.0337, "lon": -82.9287})   # cropland point (ESA WorldCover)
+        self.assertEqual(j["polygon_status"], "SAMPLE")
+        self.assertEqual(j["previous_point"]["lat"], 42.0356)
 
     def test_detect_shape_and_real_verdict(self):
         j = self.c.get("/api/detect/harrow-power").json()
@@ -184,6 +197,32 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(rots["corn-soy-wheat-clover"]["quantity"]["meets"])
         self.assertFalse(rots["corn-soy"]["quantity"]["meets"])
         self.assertEqual(rots["corn-soy"]["quantity"]["shortfall_bu_ac"], 6.0)
+
+    def test_soybean_pick_ranks_by_soybean_yield(self):
+        rots = self.c.get("/api/rotation/harrow?must_grow=soybean").json()["rotations"]
+        ids = [r["id"] for r in rots]
+        self.assertEqual(ids[:2], ["corn-soy-wheat", "soy-soy-wheat"])         # 64 then 53
+        self.assertTrue(all(r["picked_crop_evidence"] != "trial" for r in rots[2:]))
+
+    def test_every_rotation_number_has_a_calculation(self):
+        j = self.c.get("/api/rotation/harrow?must_grow=maize&need_bu=160").json()
+        for r in j["rotations"]:
+            self.assertTrue(r["score_calc"])
+            self.assertIn("of 3 years" if len(r["crops"]) == 3 else "of 2 years", r["quantity"]["calc"])
+            for y in r["yields"]:
+                self.assertIn(y["status"], ("SOURCED", "DERIVED", "REGIONAL", "MISSING"))
+                self.assertEqual(y["storage"], "CACHED")
+
+    def test_predict_has_two_source_rain_range(self):
+        dry = self.c.get("/api/predict/harrow").json()["scenarios"][1]
+        lo, hi = dry["rainfall_range_mm"]
+        self.assertLess(lo, hi)
+        self.assertLess(hi, 0)
+        self.assertEqual({x["source"] for x in dry["stress_by_source"]}, {"POWER", "IMERG"})
+
+    def test_detect_reports_data_quality(self):
+        dq = self.c.get("/api/detect/harrow").json()["data_quality"]["files"]
+        self.assertEqual(dq["power_t2m_harrow_1981_2025.csv"]["usable_rows"], 540)
 
     def test_bad_inputs(self):
         self.assertEqual(self.c.get("/api/rotation/nope").status_code, 404)
