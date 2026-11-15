@@ -65,6 +65,14 @@ Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:a
 - Corn trial yields in projected years get a DERIVED range across the 5 NASA climate models, for example 145 to 173 bu/ac for corn in the clover rotation in 2028
 - New route `/api/climate-yield/harrow`. Data in `data/seed/essex_yields.csv`, code in `backend/climate_yield.py`. 95 tests and the browser check pass
 
+**Done Sun (Dev's frontend 5ac4ccf re-copied)**
+- Dev's latest design copied file by file from `devs/new-frontend` at 5ac4ccf. Not merged; his branch untouched
+- New from Dev: one-row header, Sources button, location bookmarks (other places show "not connected", no live calls), rain coverage bar per option
+- Kept: trial-first order, target check, Other crops tab, trend card, 2012 replay, climate yield card, timeline to 2040
+- Dev's ranking text said rain-led. Changed to trial evidence first, rain is a check
+- Wheat targets stay supported through the long-term trial. Two of Dev's tests updated to the decided rules
+- 99 tests and the browser check pass
+
 **Still UNVERIFIED or not available (owner: you)**
 1. Corn yield period: the Top Crop Manager article gives no period for the 2001-trial corn figures
 2. Soil carbon sampling depth and the "woodlot about 6 percent" comparison: not in the source

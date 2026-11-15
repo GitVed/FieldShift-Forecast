@@ -129,6 +129,47 @@ class OutlookTests(unittest.TestCase):
         self.assertIsNone(future['soil_moisture'])
         self.assertNotEqual(data['drying_proxy_kpa'],future['drying_proxy_kpa'])
 
+    def test_water_percentages_have_plain_quantity_explanations(self):
+        data=self.client.get('/api/recommendations/harrow?year=2026').json()
+        for row in data['rotations']:
+            advice=row['water_advice']
+            self.assertEqual(advice['low_pct'],round(row['water']['ensemble_low_pct']))
+            self.assertEqual(advice['high_pct'],round(row['water']['ensemble_high_pct']))
+            self.assertIn('every 100 mm',advice['meaning'])
+            self.assertIn('Not a chance of success',advice['caution'])
+            self.assertNotIn('wheat',advice['assessed_crops'])
+
+    def test_repeated_future_match_is_explained_and_priority_is_respected(self):
+        future=[self.client.get(f'/api/recommendations/harrow?year={y}').json() for y in range(2026,2031)]
+        # Decided ranking (b): trial evidence first, rain is a check, so the summary says so every year.
+        self.assertTrue(all('trial evidence first' in row['ranking_summary'] and 'Rain is a check' in row['ranking_summary'] for row in future))
+        for crop,label in [('maize','Corn'),('soybean','Soy'),('wheat','Wheat')]:
+            rows=self.client.get(f'/api/recommendations/harrow?year=2026&must_grow={crop}').json()['rotations']
+            self.assertTrue(all(any(label.lower() in c.lower() for c in row['crops']) for row in rows))
+
+    def test_wheat_target_uses_long_term_trial_instead_of_being_ignored(self):
+        # Wheat targets are checked against the long-term trial (Agomoh et al.), never silently ignored.
+        support=self.client.get('/api/timeline/harrow').json()['priority_crops']
+        self.assertTrue(support['wheat']['supported'])
+        self.assertTrue(support['maize']['supported'])
+        for target in [50,100,200]:
+            response=self.client.get(f'/api/recommendations/harrow?year=2026&must_grow=wheat&need_bu={target}')
+            self.assertEqual(response.status_code,200)
+            rows=response.json()['rotations'];self.assertTrue(rows)
+            for row in rows:
+                self.assertEqual(row['quantity']['crop'],'wheat')
+                self.assertEqual(row['quantity']['meets'],row['quantity']['best_bu_ac']>=target)
+        response=self.client.get('/api/recommendations/harrow?year=2026&must_grow=wheat')
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(response.json()['rotations'])
+        self.assertTrue(response.json()['target_support']['supported'])
+
+    def test_missing_future_moisture_explains_the_connected_data_limit(self):
+        for year in self.client.get('/api/timeline/harrow').json()['years'][5:]:
+            moisture=year['metrics']['soil_moisture']
+            self.assertIsNone(moisture['value'])
+            self.assertIn('No future soil-moisture model',moisture['unavailable_reason'])
+
     def test_unavailable_projection_does_not_use_sample_profile(self):
         data=copy.deepcopy(timeline_data());data['years'][5].update(available=False,message='Projection cache unavailable')
         with patch('backend.outlook.timeline_data',return_value=data):

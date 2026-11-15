@@ -112,6 +112,22 @@ def footprint(lat,lon,dy,dx,source):
     return dict(center=[lat,lon],bounds=[[lat-dy/2,lon-dx/2],[lat+dy/2,lon+dx/2]],source=source)
 
 
+def crop_target_support():
+    """Which crops have a yield reference a target can be checked against.
+    Counts the 5-year trial, the long-term trial (Agomoh et al.) and the regional
+    Essex line, the same evidence the target check in app._quantity uses."""
+    from backend.rotation import load_trial_yields
+    from backend.app import longterm_yields,regional_yields
+    names={name for (_,name) in load_trial_yields()}|{crop for (_,crop) in longterm_yields()}|set(regional_yields())
+    result={}
+    for api_name,crop in [('maize','corn'),('soybean','soybean'),('wheat','wheat')]:
+        supported=crop in names
+        label={'maize':'Corn','soybean':'Soybean','wheat':'Wheat'}[api_name]
+        result[api_name]=dict(supported=supported,message='' if supported else
+            f'{label} yield targets are not available. No {crop} yield reference is connected.')
+    return result
+
+
 @functools.lru_cache(maxsize=1)
 def timeline_data():
     observations={v:field_profile.monthly(v) for v in field_profile.FILES}
@@ -153,6 +169,7 @@ def timeline_data():
                     'NASA NEX-GDDP-CMIP6 v2, SSP370',min(values) if values else None,max(values) if values else None)
                 metrics[var]['source_ids']=[f"nex_v2_{model}_{ {'temperature':'tas','precipitation':'pr','humidity':'hurs'}[var]}_{year}" for model in model_names] if values else []
             metrics['soil_moisture']=metric(None,'soil_moisture','unavailable','Not projected',window='July, 0–10 cm')
+            metrics['soil_moisture']['unavailable_reason']='No future soil-moisture model is connected. Cached GLDAS observations end in 2025.'
         available=all(metrics[v]['value'] is not None for v in observations)
         by_year[year]=dict(year=year,kind='observed' if historical else 'projection',available=available,
             message='' if available else projection_error,model_count=len(model_names),metrics=metrics,
@@ -161,7 +178,7 @@ def timeline_data():
     field=json.loads((ROOT/'backend'/'field_config.json').read_text(encoding='utf-8'))
     return dict(field_id='harrow',location=dict(lat=field['lat'],lon=field['lon'],name='Harrow, Ontario',
             note='SAMPLE cropland square, not a surveyed field. Climate data cells are unchanged from the earlier town point.'),
-        years=list(by_year.values()),baseline=baseline,soil=field_profile.soil(),
+        years=list(by_year.values()),baseline=baseline,soil=field_profile.soil(),priority_crops=crop_target_support(),
         period='May–September planning window; winter-wheat water checks excluded',
         projection=dict(scenario='SSP370',models=model_info.get('models',[]),
             calibration='1991–2014 monthly change alignment to NASA POWER',comparison='2015–2025 monthly climatologies, not annual forecast skill',
@@ -247,6 +264,29 @@ def rank_annual_options(rows,crop_sequences,selected,baseline,soil):
     return context
 
 
+def water_advice(row,selected,crops):
+    """Translate rain coverage into quantities a farmer can interpret.
+
+    This compares regional rain with FAO crop-water ranges, not effective soil
+    water, irrigation demand, crop survival probability or a yield prediction.
+    """
+    projected=selected['kind']=='projection'
+    low=row['water']['ensemble_low_pct'] if projected else row['water']['low_pct']
+    high=row['water']['ensemble_high_pct'] if projected else row['water']['high_pct']
+    assessed=sorted(set(crops)&{'corn','soybean'});unassessed=sorted(set(crops)-set(assessed))
+    if low is None or high is None:
+        return dict(low_pct=None,high_pct=None,status='Water check unavailable',
+                    meaning='No compatible growing-window water comparison is available.',assessed_crops=assessed,unassessed_crops=unassessed)
+    status='Rainfall alone may fall short' if high<100 else 'Check your water supply' if low<100 else 'Rain may cover estimated needs'
+    display_low=round(low);display_high=round(high)
+    return dict(low_pct=display_low,high_pct=display_high,status=status,
+        meaning=f'About {display_low}–{display_high} mm of rain for every 100 mm the assessed crops may need.',
+        action='Check soil water and irrigation before committing to this rotation.' if low<100 else 'Check soil storage and drainage before relying on rainfall alone.',
+        range_explanation=('Range combines different crop water needs and climate-model spread.' if projected else 'Range reflects different crop water needs.'),
+        assessed_crops=assessed,unassessed_crops=unassessed,
+        caution='Rain only; excludes soil water storage and irrigation. Not a chance of success.')
+
+
 @router.get('/recommendations/{field_id}')
 def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
                     must_grow:Optional[str]=None,need_bu:Optional[float]=Query(None,gt=0)):
@@ -254,6 +294,9 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
     if need_bu is not None and not math.isfinite(need_bu):raise HTTPException(422,'Yield target must be finite')
     if need_bu is not None and not must_grow:raise HTTPException(422,'Choose a crop for the yield target')
     if must_grow and stress.normalise_crop(must_grow) is None:raise HTTPException(422,'Choose corn, soybean or wheat')
+    support=crop_target_support().get('maize' if stress.normalise_crop(must_grow)=='corn' else stress.normalise_crop(must_grow)) if must_grow else None
+    if need_bu is not None and support and not support['supported']:
+        raise HTTPException(422,support['message']+' Choose wheat without a target to view compatible rotations.')
     data=timeline_data();selected=next(r for r in data['years'] if r['year']==year)
     if not selected['available']:
         return dict(year=year,status='unavailable',rotations=[],message=selected['message'],must_grow=must_grow)
@@ -288,7 +331,14 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
         row['reason']=f"Historical trial index {row['score']}; ranking also considers published drought-resilience evidence. {year} rain coverage is a separate check. Trial yields are historical references, not projected yields."
     sequences={row['id']:rotation.ROTATIONS[names[row['id']]] for row in result['rotations']}
     context=rank_annual_options(result['rotations'],sequences,selected,data['baseline'],data['soil'])
-    result.update(climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
+    for row in result['rotations']:
+        row['water_advice']=water_advice(row,selected,sequences[row['id']])
+        assessed=row['water_advice']['assessed_crops']
+        row['rank_explanation']=('Placed by trial evidence first. '+('Rain is checked against soybean water need only. ' if assessed==['soybean'] else 'Rain is checked against corn and soybean water need. ')+'Winter-wheat water is not assessed. Rain is a check, not the ranking.')
+    below_need=profile['rain_mm']<min(suitability.FAO_WATER_NEED_MM[c][0] for c in ('maize','soybean'))
+    summary='Ordered by trial evidence first. '+('This year’s rain is below the lower water need of the assessed crops, so check water before you commit.' if below_need else 'This year’s rain meets at least one assessed crop’s lower water need.')+' Rain is a check, not the ranking.'
+    if must_grow:summary=f"Only rotations containing {stress.normalise_crop(must_grow)} are considered. "+summary
+    result.update(target_support=support,ranking_summary=summary,climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
         model_count=selected['model_count'],message=None,
         ranking='Trial evidence first: target support, then the trial yield of your crop or the trial yield index, then pH, then the selected year rain fit, sourced drought resilience and period GAEZ suitability. Rule-based, not a trained yield forecast.',
         suitability_note='GAEZ is period-based suitability, not annual prediction accuracy or a probability.',
