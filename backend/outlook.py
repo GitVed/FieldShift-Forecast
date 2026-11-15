@@ -155,7 +155,10 @@ def timeline_data():
         by_year[year]=dict(year=year,kind='observed' if historical else 'projection',available=available,
             message='' if available else projection_error,model_count=len(model_names),metrics=metrics,
             footprint=power if historical else nex,soil_moisture_footprint=gldas if historical else None)
-    return dict(field_id='harrow',location=dict(lat=42.0356,lon=-82.9183,name='Harrow, Ontario'),
+    import json
+    field=json.loads((ROOT/'backend'/'field_config.json').read_text(encoding='utf-8'))
+    return dict(field_id='harrow',location=dict(lat=field['lat'],lon=field['lon'],name='Harrow, Ontario',
+            note='SAMPLE cropland square, not a surveyed field. Climate data cells are unchanged from the earlier town point.'),
         years=list(by_year.values()),baseline=baseline,soil=field_profile.soil(),
         period='May–September planning window; winter-wheat water checks excluded',
         projection=dict(scenario='SSP370',models=model_info.get('models',[]),
@@ -164,7 +167,10 @@ def timeline_data():
             note='Climate scenarios, not weather forecasts. Ranges show model spread, not probabilities.'),
         trend=field_profile.temperature_trend(),sources=[
             dict(name='NASA POWER',url='https://power.larc.nasa.gov/'),dict(name='NASA GLDAS',url='https://ldas.gsfc.nasa.gov/gldas'),
-            dict(name='NASA NEX-GDDP-CMIP6',url=NASA_URL),dict(name='FAO HWSD2 soil',url='https://www.fao.org/land-water/resources/tools/databases/hwsd/en'),
+            dict(name='NASA NEX-GDDP-CMIP6',url=NASA_URL),dict(name='ISRIC SoilGrids 250 m (field soil)',url='https://www.isric.org/explore/soilgrids'),
+            dict(name='ESA WorldCover 2021 (cropland check)',url='https://esa-worldcover.org/'),
+            dict(name='AAFC Woodslee rotation trial (Top Crop Manager, Drury 2021)',url='https://www.topcropmanager.com/the-benefits-of-crop-rotation-and-diversification/'),
+            dict(name='FAO HWSD2 soil (cross-check)',url='https://www.fao.org/land-water/resources/tools/databases/hwsd/en'),
             dict(name='FAO GAEZ',url='https://www.fao.org/gaez/en')])
 
 

@@ -8,7 +8,7 @@ Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we wo
 
 ## Status, Sat evening
 
-Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 77 tests pass. It is not on main yet.
+Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 93 tests pass. It is not on main yet.
 
 Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/frontend/?api=1
 
@@ -44,6 +44,15 @@ Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:a
 - Checks: `docs/VERIFY.md` (hand-check tables) and `docs/claude-gap-findings.md` (Muse report check)
 
 **API params on `/api/rotation/harrow`**: `scenario` (normal, dry, 2035_dry or future), `must_grow` (soybean, maize or corn, wheat), `need_bu` (your bu/ac target). Only new fields were added to Shlok's shape.
+
+**Done Sun morning (P0)**
+- Dev's new frontend copied from `devs/new-frontend` (not merged; his branch untouched). Opens at http://localhost:8765/
+- Rankings use trial evidence first. This year's rain fit is a check on each option, not the ranking
+- Target bug fixed: `target_support` (all, some, none). At 60 bu/ac soy, corn-soy-wheat ranks first
+- Trend card (+0.75 C per decade since 1981, confirmed north and 1991). Cropland field and Woodslee trial point on the satellite map
+- "Will this rotation meet my target?" on every option, with both trial figures and the per-year average
+- Other crops tab with Ontario and GAEZ filters; perennials and crops not grown here collapsed
+- 93 tests and Dev's browser check pass (offline tiles, mobile, print)
 
 **Still UNVERIFIED or not available (owner: you)**
 1. Corn yield period: the Top Crop Manager article gives no period for the 2001-trial corn figures

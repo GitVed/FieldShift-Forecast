@@ -26,20 +26,21 @@
 <aside class="rail" aria-label="Workspace navigation">
 <a href="./" class="brand" aria-label="FieldShift home"><svg><use href="#i-leaf"/></svg></a>
 <div class="rail-line"></div>
-<button class="rail-button active" id="nav-overview" aria-label="Recommendations" title="Recommendations"><svg><use href="#i-map"/></svg><span>Explore</span></button>
-<button class="rail-button" id="nav-priority" aria-label="Priority crop" title="Priority crop"><svg><use href="#i-target"/></svg><span>Priority</span></button>
+<button class="rail-button active" id="nav-overview" aria-label="Recommendations" title="Recommendations"><svg><use href="#i-map"/></svg><span>Outlook</span></button>
+<button class="rail-button" id="nav-priority" aria-label="My crop" title="My crop"><svg><use href="#i-target"/></svg><span>My crop</span></button>
+<button class="rail-button" id="nav-others" aria-label="Other crops" title="Other crops"><svg><use href="#i-leaf"/></svg><span>Other crops</span></button>
 <button class="rail-button rail-bottom" id="nav-sources" aria-label="View data sources" title="Data sources"><svg><use href="#i-info"/></svg><span>Sources</span></button>
 <div class="rail-avatar" title="Harrow pilot">HF</div>
 </aside>
 <div class="workspace">
 <header class="topbar"><a class="wordmark" href="./">FieldShift<span>FORECAST</span></a><div class="topbar-right"><span class="location-pill"><span class="status-dot"></span>Harrow, Ontario</span><button class="icon-button" id="print-plan" aria-label="Print your field plan" title="Print field plan"><svg><use href="#i-print"/></svg></button></div></header>
 <main id="main">
-<section class="page-heading"><div><div class="eyebrow">A LITTLE MORE CLARITY. A BETTER NEXT SEASON.</div><h1>Your field. A future worth planning.</h1><p>Explore the conditions. Find a rotation that fits.</p></div></section>
+<section class="page-heading"><div><div class="eyebrow">A LITTLE MORE CLARITY. A BETTER NEXT SEASON.</div><h1>Your field. A future worth planning.</h1><p>Measured climate since 1981, NASA climate scenarios to 2030 and Ontario trial yields. We do not predict bushels.</p></div></section>
 <div id="load-error" class="error-banner" hidden role="alert"><span id="error-message"></span><button id="retry-load">Try again</button></div>
 <div class="dashboard">
 <section class="explorer" aria-label="Interactive field outlook">
 <div class="map-card">
-<header class="map-header"><div><span class="eyebrow">YOUR REGIONAL OUTLOOK</span><h2>Harrow &amp; the seasons ahead <span class="year-inline" id="heading-year">2026</span></h2></div><span class="data-badge" id="data-badge">Loading data</span></header>
+<header class="map-header"><div><span class="eyebrow">CLIMATE OUTLOOK</span><h2>Harrow &amp; the seasons ahead <span class="year-inline" id="heading-year">2026</span></h2></div><span class="data-badge" id="data-badge">Loading data</span></header>
 <div class="layer-toolbar" role="group" aria-label="Map data layer">
 <button class="layer-button active" data-layer="temperature" aria-pressed="true"><svg><use href="#i-sun"/></svg>Temperature</button>
 <button class="layer-button" data-layer="precipitation" aria-pressed="false"><svg><use href="#i-rain"/></svg>Rainfall</button>
@@ -64,13 +65,15 @@
 <div class="year-ticks" id="year-ticks"></div></div><div class="timeline-periods"><span><i></i>Observed history</span><span><i></i>Projected climate · SSP370</span></div>
 </section>
 </div>
+<section class="trend-card" id="trend-card" hidden aria-live="polite"></section>
 <div class="metric-strip" id="metric-strip" aria-live="polite"><div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div></div>
 <div class="outlook-footnote"><svg><use href="#i-info"/></svg><span id="outlook-footnote">Future values are climate scenarios, not forecasts of actual weather. Field boundary not surveyed.</span></div>
 </section>
 <aside class="recommendation-panel" aria-label="Crop rotation recommendations">
-<div class="panel-tabs" role="tablist" aria-label="Recommendation mode"><button id="tab-recommendations" role="tab" aria-selected="true" aria-controls="panel-body" class="panel-tab active">Recommendations</button><button id="tab-priority" role="tab" aria-selected="false" aria-controls="panel-body" class="panel-tab"><svg><use href="#i-target"/></svg>Priority</button></div>
-<div class="panel-intro"><span class="eyebrow" id="panel-eyebrow">GROW WITH A PLAN</span><h2 id="panel-title">A rotation for what’s next.</h2><p id="panel-description">Evidence-led options for your next growing seasons.</p></div>
-<form class="priority-form" id="priority-form" hidden><fieldset><legend>What do you want to grow?</legend><div class="crop-picker"><button type="button" data-crop="maize" aria-pressed="false"><svg><use href="#i-corn"/></svg><span>Corn</span></button><button type="button" data-crop="soybean" aria-pressed="false"><svg><use href="#i-soy"/></svg><span>Soybean</span></button><button type="button" data-crop="wheat" aria-pressed="false"><svg><use href="#i-wheat"/></svg><span>Wheat</span></button></div></fieldset><label for="yield-target">Your yield target <span>optional</span></label><div class="target-input"><input id="yield-target" type="number" min="0.1" step="0.1" placeholder="e.g. 150" inputmode="decimal"><span>bu/ac</span></div><div class="form-actions"><button class="primary-button" type="submit">Build my rotation <svg><use href="#i-arrow"/></svg></button><button type="button" id="reset-priority" class="text-button">Reset</button></div><p id="priority-error" class="form-error" role="alert" hidden></p><p class="input-note">Targets are checked against historical trial yields.</p></form>
+<div class="panel-tabs" role="tablist" aria-label="Recommendation mode"><button id="tab-recommendations" role="tab" aria-selected="true" aria-controls="panel-body" class="panel-tab active">Rotations</button><button id="tab-priority" role="tab" aria-selected="false" aria-controls="panel-body" class="panel-tab"><svg><use href="#i-target"/></svg>My crop</button><button id="tab-others" role="tab" aria-selected="false" aria-controls="panel-body" class="panel-tab">Other crops</button></div>
+<div class="panel-intro"><span class="eyebrow" id="panel-eyebrow">ROTATIONS FROM TRIAL EVIDENCE</span><h2 id="panel-title">Rotations that held up in the trial.</h2><p id="panel-description">Ordered by trial evidence. This year’s rain is a check. We do not predict bushels.</p></div>
+<form class="priority-form" id="priority-form" hidden><fieldset><legend>What do you want to grow?</legend><div class="crop-picker"><button type="button" data-crop="maize" aria-pressed="false"><svg><use href="#i-corn"/></svg><span>Corn</span></button><button type="button" data-crop="soybean" aria-pressed="false"><svg><use href="#i-soy"/></svg><span>Soybean</span></button><button type="button" data-crop="wheat" aria-pressed="false"><svg><use href="#i-wheat"/></svg><span>Wheat</span></button></div></fieldset><label for="yield-target">Your target <span>bu/ac, optional</span></label><div class="target-input"><input id="yield-target" type="number" min="0.1" step="0.1" placeholder="e.g. 150" inputmode="decimal"><span>bu/ac</span></div><div class="form-actions"><button class="primary-button" type="submit">Build my rotation <svg><use href="#i-arrow"/></svg></button><button type="button" id="reset-priority" class="text-button">Reset</button></div><p id="priority-error" class="form-error" role="alert" hidden></p><p class="input-note">Compared with trial history only. Not a forecast.</p></form>
+<div class="target-summary" id="target-summary" hidden aria-live="polite"></div>
 <div class="panel-results-heading"><span id="results-count">FINDING YOUR OPTIONS</span><span id="recommendation-year">2026 OUTLOOK</span></div>
 <div id="panel-body" role="tabpanel" aria-labelledby="tab-recommendations" aria-live="polite"><div class="card-skeleton"></div></div>
 <div id="option-nav" class="option-nav" hidden aria-label="Recommendation options"><button id="previous-option" class="option-arrow" aria-label="Previous recommendation">‹</button><div class="option-position"><span id="option-count" aria-live="polite">Option 1 of 3</span><div id="option-dots" class="option-dots"></div></div><button id="next-option" class="option-arrow" aria-label="Next recommendation">›</button></div><div id="climate-context" class="climate-context" hidden></div><div class="panel-bottom"><svg><use href="#i-leaf"/></svg><p>Built on NASA climate data and Ontario rotation trials.<button class="text-button" id="recommendation-method">See the evidence <span>↗</span></button></p></div>

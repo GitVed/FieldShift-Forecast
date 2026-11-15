@@ -45,14 +45,14 @@ def run(url,historical_preview=False):
         assert len(set(legends))==4
         assert page.evaluate('colorFor(rangeFor("temperature")[0],"temperature")')=='#367fc2'
         assert page.evaluate('colorFor(rangeFor("temperature")[1],"temperature")')=='#cc4946'
-        expect(page.locator('#map-reading strong')).to_contain_text('6.7')
+        expect(page.locator('#map-reading strong')).to_contain_text('6.6')  # SoilGrids at the cropland field
         static=page.locator('#map-reading strong').inner_text();page.locator('[data-year="2030"]').click()
         expect(page.locator('#map-reading strong')).to_have_text(static)
         page.locator('[data-layer="soil_moisture"]').click();expect(page.locator('#map-unavailable')).to_be_visible()
         page.locator('#view-history').click();expect(page.locator('#heading-year')).to_have_text('2025')
         expect(page.locator('#map-unavailable')).to_be_hidden()
         expect(page.locator('#panel-body')).to_have_attribute('aria-busy','false')
-        assert page.locator('.rotation-card').get_attribute('data-rotation-id')!=wet_first
+        assert page.locator('.rotation-card').get_attribute('data-rotation-id')==wet_first  # trial evidence first; the year changes the rain check, not the order
         page.locator('[data-layer="temperature"]').click()
         page.locator('#tab-priority').click();expect(page.locator('#priority-form')).to_be_visible()
         expect(page.locator('#panel-body')).to_contain_text('Choose a crop')
@@ -61,18 +61,27 @@ def run(url,historical_preview=False):
             expect(page.locator('#panel-body[aria-busy="false"]')).to_be_visible()
             for card in page.locator('.rotation-card').all():assert label in card.locator('.crop-sequence').inner_text()
         page.locator('[data-crop="maize"]').click();page.locator('#yield-target').fill('150');page.locator('#priority-form [type=submit]').click()
-        expect(page.locator('.quantity-note').first).to_be_visible()
-        assert '150' in page.locator('.quantity-note').first.inner_text()
+        expect(page.locator('.target-check').first).to_be_visible()
+        assert '150' in page.locator('.target-check').first.inner_text()
+        expect(page.locator('#target-summary')).to_contain_text('150')
         page.locator('[data-crop="soybean"]').click();page.locator('#yield-target').fill('50');page.locator('#priority-form [type=submit]').click()
         expect(page.locator('#panel-body')).to_have_attribute('aria-busy','false')
         fifty=page.locator('.rotation-card').get_attribute('data-rotation-id')
         page.locator('#yield-target').fill('60');page.locator('#priority-form [type=submit]').click()
         expect(page.locator('#panel-body')).to_have_attribute('aria-busy','false')
-        assert page.locator('.rotation-card').get_attribute('data-rotation-id')!=fifty
-        expect(page.locator('.quantity-note')).to_contain_text('60')
+        assert page.locator('.rotation-card').get_attribute('data-rotation-id')=='corn-soy-wheat'  # 64 meets 60, must not rank last
+        expect(page.locator('.target-check')).to_contain_text('Depends on the figure')
         page.locator('#yield-target').fill('-5');assert not page.locator('#yield-target').evaluate('(el)=>el.checkValidity()')
         page.locator('#reset-priority').click();expect(page.locator('#yield-target')).to_have_value('')
         expect(page.locator('#panel-body')).to_contain_text('Choose a crop')
+        # Detect evidence, field overlays and other crops (added Sun Nov 15).
+        expect(page.locator('#trend-card')).to_contain_text('per decade')
+        assert page.locator('.leaflet-interactive').count()>=3,'field square, trial point and grid cell expected'
+        page.locator('#tab-others').click();expect(page.locator('.crop-card').first).to_be_visible()
+        expect(page.locator('#panel-body')).to_contain_text('Kidney beans');expect(page.locator('#panel-body')).to_contain_text('white mould')
+        before=page.locator('.crop-card').count();page.locator('#filter-grown').check()
+        assert page.locator('.crop-card').count()<before,'Ontario filter should narrow the list'
+        page.locator('#tab-priority').click()
         page.locator('#tab-priority').focus();page.keyboard.press('ArrowLeft');expect(page.locator('#tab-recommendations')).to_have_attribute('aria-selected','true')
         expect(page.locator('.rotation-card')).to_have_count(1)
         page.locator('.rotation-card summary').first.click();expect(page.locator('.rotation-card details').first).to_have_attribute('open','')
