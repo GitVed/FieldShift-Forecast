@@ -213,10 +213,10 @@ function renderRecommendations(){
  $('recommendation-year').textContent=`${state.year} OUTLOOK`;
  $('option-nav').hidden=true;
  if(state.mode==='others'){renderOtherCrops();return;}
- if(state.mode==='priority'&&!state.crop){renderTargetSummary([]);$('results-count').textContent='YOUR CROP COMES FIRST';$('panel-body').innerHTML=`<div class="empty-state">${icon('target')}<strong>Start with your priority.</strong>Choose a crop above. We’ll find supported rotations that make room for it.</div>`;return;}
+ if(state.mode==='priority'&&!state.crop){renderTargetSummary([]);$('results-count').textContent='YOUR CROP COMES FIRST';$('panel-body').innerHTML=`<div class="empty-state">${icon('target')}<strong>Start with your priority.</strong>Choose a crop above. Rotations show right away, ordered by trial yield. The target check is optional.</div>`;return;}
  if(!data)return;
  if(data.status==='unavailable'){$('results-count').textContent='OUTLOOK UNAVAILABLE';$('panel-body').innerHTML=`<div class="empty-state">${icon('info')}<strong>No invented predictions.</strong>${esc(data.message)}<button class="primary-button" data-view-history>Explore 2025 history</button></div>`;$('panel-body').querySelector('[data-view-history]').onclick=()=>setYear(2025);return;}
- const rows=data.rotations.slice(0,3);$('results-count').textContent=`${rows.length} OPTIONS BY TRIAL EVIDENCE`;renderTargetSummary(rows);
+ const rows=data.rotations.slice(0,3);$('results-count').textContent=state.mode==='priority'?(state.target?`${rows.length} OPTIONS · CHECKED AGAINST ${state.target} BU/AC`:`${rows.length} OPTIONS BY TRIAL YIELD · NO TARGET SET`):`${rows.length} OPTIONS BY TRIAL EVIDENCE`;renderTargetSummary(rows);
  if(rows.length){$('option-nav').hidden=false;showOption(state.optionIndex);}
  else $('panel-body').innerHTML='<div class="empty-state"><strong>No supported rotation.</strong>Try a different crop or reset your priority.</div>';
 }
@@ -259,7 +259,7 @@ function setMode(mode){
  ['recommendations','priority','others'].forEach(name=>{const active=name===mode;$(`tab-${name}`).classList.toggle('active',active);$(`tab-${name}`).setAttribute('aria-selected',String(active));$(`tab-${name}`).tabIndex=active?0:-1;});
  $('panel-body').setAttribute('aria-labelledby',`tab-${mode}`);
  $('panel-title').textContent=priority?'Will this rotation meet my target?':others?'What else could grow here?':'Rotations that held up in the trial.';
- $('panel-description').textContent=priority?'Pick a crop and a bu/ac target. We compare it with trial history only.':others?'Suitability only. No bushels, rotations or revenue for these crops.':'Ordered by trial evidence. This year’s rain is a check. We do not predict bushels.';
+ $('panel-description').textContent=priority?'Pick a crop. Rotations with it show right away, ordered by its trial yield. A bu/ac target is optional and adds a check against trial history.':others?'Suitability only. No bushels, rotations or revenue for these crops.':'Ordered by trial evidence. This year’s rain is a check. We do not predict bushels.';
  updateTargetControl();
  loadRecommendations();
 }
@@ -280,7 +280,7 @@ function updateTargetControl(){
  $('yield-target').disabled=!state.crop||Boolean(unsupported);
  $('yield-target').placeholder=unsupported?'Yield reference unavailable':'e.g. 150';
  document.querySelector('label[for="yield-target"]').hidden=Boolean(unsupported);document.querySelector('.target-input').hidden=Boolean(unsupported);
- $('priority-form').querySelector('[type=submit]').innerHTML=(unsupported?'Show compatible rotations':'Build my rotation')+icon('arrow');
+ $('priority-form').querySelector('[type=submit]').innerHTML=(unsupported?'Show compatible rotations':'Check my target')+icon('arrow');
  $('priority-notice').hidden=!unsupported;
  $('priority-notice').textContent=unsupported?support.message+' Compatible rotations are shown without a yield target.':'';
  if(unsupported){state.target=null;$('yield-target').value='';}

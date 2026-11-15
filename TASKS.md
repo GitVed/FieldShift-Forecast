@@ -8,7 +8,7 @@ Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we wo
 
 ## Status, Sat evening
 
-Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 95 tests pass. It is not on main yet.
+Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 99 tests pass. It is not on main yet.
 
 Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/frontend/?api=1
 
