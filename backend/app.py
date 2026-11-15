@@ -130,6 +130,16 @@ def _trend_rows():
         return [r for r in csv.DictReader(f) if r["cell_id"] == "power_harrow_point" and r["start_year"] == "1981"]
 
 
+def _soil_moisture_trend():
+    t = field_profile.july_soil_moisture_trend()
+    return {"id": "soil_moisture", "name": "July topsoil moisture trend (0-10 cm)",
+            "value": round(t["slope_per_decade"], 4), "unit": "m³/m³ / decade",
+            "p_value": f"{t['p_value']:.2g}", "status": "CACHED",
+            "verdict": f"{t['direction']}, {t['verdict']}",
+            "source": (f"GLDAS Noah 0.25 degree, July {t['start_year']}-{t['end_year']} ({t['n']} years), "
+                       f"{t['method']}. No buddy cell, so not confirmed.")}
+
+
 @app.get("/api/detect/{cell_id}")
 def detect(cell_id: str):
     if cell_id not in ("harrow", "harrow-power", "power_harrow_point"):
@@ -152,9 +162,7 @@ def detect(cell_id: str):
         "trends": [
             trend(t, "temperature", "Temperature trend (all months, deseasonalised)", "°C / decade"),
             trend(p, "rainfall", "Rainfall trend (monthly totals)", "mm/month / decade"),
-            {"id": "soil_moisture", "name": "July soil moisture trend", "value": None, "unit": "m³/m³ / decade",
-             "p_value": None, "status": "UNVERIFIED",
-             "source": "No trend computed yet for GLDAS soil moisture (record starts 2000)"},
+            _soil_moisture_trend(),
         ],
         "series": [],
         "source": src,

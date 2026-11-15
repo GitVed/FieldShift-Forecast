@@ -189,6 +189,26 @@ def build_scenarios():
     return out
 
 
+def july_soil_moisture_trend(depth=("0", "10")):
+    """Mann-Kendall test and Sen slope on July GLDAS topsoil moisture, one value
+    per year (no deseasonalising needed). Same libraries as Dev's trend.py.
+    There is no GLDAS buddy cell, so the verdict can never be "confirmed"."""
+    import pymannkendall as mk
+    from scipy.stats import theilslopes
+    sm = gldas_july(depth)
+    years = sorted(sm)
+    values = [sm[y] for y in years]
+    test = mk.original_test(values)
+    slope = float(theilslopes(values, years)[0] * 10)
+    significant = bool(test.h)
+    return {"slope_per_decade": slope, "unit": "m3/m3 per decade", "p_value": float(test.p),
+            "n": len(values), "start_year": years[0], "end_year": years[-1],
+            "direction": ("increasing" if slope > 0 else "decreasing") if significant else "no significant trend",
+            "verdict": "not confirmed (no buddy cell, short record)" if significant else "inconclusive",
+            "method": "Mann-Kendall (original), Sen slope, July values only",
+            "source_id": "gldas_noah025", "label": "CACHED"}
+
+
 def dry_year_check():
     """May-Sep rain for the two years README calls dry, against the baseline."""
     P = monthly("precipitation")
