@@ -235,6 +235,29 @@ def rank_annual_options(rows,crop_sequences,selected,baseline,soil):
     return context
 
 
+def water_advice(row,selected,crops):
+    """Translate rain coverage into quantities a farmer can interpret.
+
+    This compares regional rain with FAO crop-water ranges, not effective soil
+    water, irrigation demand, crop survival probability or a yield prediction.
+    """
+    projected=selected['kind']=='projection'
+    low=row['water']['ensemble_low_pct'] if projected else row['water']['low_pct']
+    high=row['water']['ensemble_high_pct'] if projected else row['water']['high_pct']
+    assessed=sorted(set(crops)&{'corn','soybean'});unassessed=sorted(set(crops)-set(assessed))
+    if low is None or high is None:
+        return dict(low_pct=None,high_pct=None,status='Water check unavailable',
+                    meaning='No compatible growing-window water comparison is available.',assessed_crops=assessed,unassessed_crops=unassessed)
+    status='Rainfall alone may fall short' if high<100 else 'Check your water supply' if low<100 else 'Rain may cover estimated needs'
+    display_low=round(low);display_high=round(high)
+    return dict(low_pct=display_low,high_pct=display_high,status=status,
+        meaning=f'About {display_low}–{display_high} mm of rain for every 100 mm the assessed crops may need.',
+        action='Check soil water and irrigation before committing to this rotation.' if low<100 else 'Check soil storage and drainage before relying on rainfall alone.',
+        range_explanation=('Range combines different crop water needs and climate-model spread.' if projected else 'Range reflects different crop water needs.'),
+        assessed_crops=assessed,unassessed_crops=unassessed,
+        caution='Rain only; excludes soil water storage and irrigation. Not a chance of success.')
+
+
 @router.get('/recommendations/{field_id}')
 def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2030),
                     must_grow:Optional[str]=None,need_bu:Optional[float]=Query(None,gt=0)):
@@ -269,7 +292,14 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2030),
         row['reason']=f"Historical trial index {row['score']}; ranking also considers published drought-resilience evidence. {year} rain coverage is a separate check. Trial yields are historical references, not projected yields."
     sequences={row['id']:rotation.ROTATIONS[names[row['id']]] for row in result['rotations']}
     context=rank_annual_options(result['rotations'],sequences,selected,data['baseline'],data['soil'])
-    result.update(climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
+    for row in result['rotations']:
+        row['water_advice']=water_advice(row,selected,sequences[row['id']])
+        assessed=row['water_advice']['assessed_crops']
+        row['rank_explanation']=('Soybean has the lower FAO water-need range among the assessed summer crops. Winter-wheat water remains unassessed.' if assessed==['soybean'] else 'Corn and soybean water coverage, regional pH and historical rotation evidence are assessed together.')
+    below_need=profile['rain_mm']<min(suitability.FAO_WATER_NEED_MM[c][0] for c in ('maize','soybean'))
+    summary=('Rain remains below the assessed crops’ lower water needs; similar dry conditions can favor the same option.' if below_need else 'Rain meets at least one assessed crop’s lower water requirement, so other evidence can change the order.')
+    if must_grow:summary=f"Only rotations containing {stress.normalise_crop(must_grow)} are considered. "+summary
+    result.update(ranking_summary=summary,climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
         model_count=selected['model_count'],message=None,
         ranking='Year-specific planning rules: priority target feasibility, pH constraints, selected-year rain coverage, sourced drought resilience when moisture or drying-demand flags apply, period GAEZ suitability and historical trial index. Rule-based, not a trained yield forecast; wheat water remains unassessed.',
         suitability_note='GAEZ is period-based suitability, not annual prediction accuracy or a probability.',

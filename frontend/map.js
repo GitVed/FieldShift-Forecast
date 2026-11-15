@@ -12,6 +12,8 @@ const layers = {
  soil:{name:'Regional topsoil pH · 0–20 cm',short:'Soil profile',unit:'pH',icon:'leaf',decimals:1,low:'',high:'',palette:['#927957','#c8ad7f','#675333']}
 };
 const fmt=(value,places=1)=>value===null||value===undefined?'—':Number(value).toLocaleString('en-CA',{minimumFractionDigits:places,maximumFractionDigits:places});
+// A display focus, not a native data cell or surveyed field boundary.
+const FOCUS_BOUNDS=[[42.0056,-82.9583],[42.0656,-82.8783]];
 const selected=()=>state.timeline?.years.find(r=>r.year===state.year);
 function getMetric(year=selected(),layer=state.layer){
  if(layer==='soil')return {value:state.timeline?.soil.ph?.value,low:null,high:null,kind:'regional_estimate',source:'FAO HWSD2 regional estimate',window:'Static soil profile · 0–20 cm'};
@@ -69,7 +71,7 @@ function updateMap(){
   extra=`<div class="soil-composition" title="Sand / silt / clay"><span style="width:${Number(soils.sand?.value||0)}%;background:#c5b88d"></span><span style="width:${Number(soils.silt?.value||0)}%;background:#acbe8e"></span><span style="width:${Number(soils.clay?.value||0)}%;background:#799777"></span></div><p>${fmt(soils.sand?.value,0)}% sand · ${fmt(soils.silt?.value,0)}% silt · ${fmt(soils.clay?.value,0)}% clay</p>`;
  }
  $('map-reading').innerHTML=`<span class="eyebrow">${esc(meta.name)}</span><strong>${fmt(m.value,meta.decimals)} <small>${esc(meta.unit)}</small></strong><p>${esc(detail)}</p>${extra}`;
- $('map-reading').hidden=missing;animateContent($('map-reading'));
+ $('map-reading').hidden=state.layer!=='soil'||missing;if(state.layer==='soil')animateContent($('map-reading'));
  $('legend-label').textContent=meta.low;$('legend-right').textContent=meta.high;
  $('legend-ramp').style.background=`linear-gradient(90deg,${meta.palette.join(',')})`;
  $('legend-ramp').parentElement.hidden=missing;
@@ -78,26 +80,25 @@ function updateMap(){
   const [lo,hi]=rangeFor(state.layer);$('legend-min').textContent=`${fmt(lo,meta.decimals)} ${meta.unit}`;$('legend-max').textContent=`${fmt(hi,meta.decimals)} ${meta.unit}`;
  }
  const grid=state.layer==='soil_moisture'?year.soil_moisture_footprint:year.footprint;
- $('grid-caption').textContent=state.layer==='soil'?'Point reference · mapped regional soil':grid?`${grid.source} · regional grid`:'No modeled soil-moisture footprint';
+ $('grid-caption').textContent='Harrow focus area · regional point estimate, not a field scan';
  if(state.map){
-  if(grid&&!missing&&state.layer!=='soil'){
-   const style={color:colorFor(m.value,state.layer),fillColor:colorFor(m.value,state.layer),fillOpacity:.30,weight:2,dashArray:future?'7 6':null};
-   const bounds=JSON.stringify(grid.bounds);
-   if(state.cell&&state.cellBounds===bounds)state.cell.setStyle(style);
-   else{if(state.cell)state.map.removeLayer(state.cell);state.cell=L.rectangle(grid.bounds,style).addTo(state.map);state.cellBounds=bounds;if(!state.framed){state.map.fitBounds(grid.bounds,{padding:[42,42],maxZoom:10,animate:false});state.framed=true;}}
-   state.cell.bindPopup(`<strong>${esc(meta.short)} · ${state.year}</strong><br>${fmt(m.value,meta.decimals)} ${esc(meta.unit)}<br>${esc(grid.source)}<br>${future?'Climate-model scenario, not actual future weather.':'Regional estimate, not a field-level measurement.'}`);
-  }else if(state.cell){state.map.removeLayer(state.cell);state.cell=null;state.cellBounds=null;}
+  const color=missing||state.layer==='soil'?'#b4c3a7':colorFor(m.value,state.layer);
+  const style={color,fillColor:color,fillOpacity:missing||state.layer==='soil'?0:.30,weight:2,dashArray:'5 5'};
+  if(state.cell)state.cell.setStyle(style);
+  else state.cell=L.rectangle(FOCUS_BOUNDS,style).addTo(state.map);
+  if(!state.framed){state.map.fitBounds(FOCUS_BOUNDS,{padding:[48,48],maxZoom:12,animate:false});state.framed=true;}
+  state.cell.bindPopup(`<strong>Harrow comparison focus</strong><br>${esc(meta.short)} · ${state.year}<br>${missing?'Data unavailable':`${fmt(m.value,meta.decimals)} ${esc(meta.unit)}`}<br>${esc(m.source||'Regional reference')}<br>The outline is a display area, not source-grid resolution or a surveyed farm.`);
  }
  $('outlook-footnote').textContent=state.layer==='soil'?'Soil properties stay static. This is a regional estimate, not a field soil test.':future?'Climate scenarios, not weather forecasts. The range is model spread, not a probability. No field-level hotspots are inferred.':'Observed regional data. May–September is a planning window, not the winter-wheat growing season.';
 }
 function updateMetrics(){
  const year=selected();
- $('metric-strip').innerHTML=['temperature','precipitation',year.kind==='projection'?'humidity':'soil_moisture'].map(key=>{
+ $('metric-strip').innerHTML=['temperature','precipitation','humidity','soil_moisture'].map(key=>{
   const m=year.metrics[key],meta=layers[key],base=state.timeline.baseline[key],missing=m.value===null;
   const change=missing?null:m.value-base.value;
-  const changeText=change===null?'Not projected':`${change>=0?'+':''}${fmt(change,meta.decimals)} ${meta.unit} vs ${key==='soil_moisture'?'2000–20 July':'1991–2020'}`;
-  const detail=missing?'See historical topsoil moisture':year.kind==='projection'?`${fmt(m.low,meta.decimals)}–${fmt(m.high,meta.decimals)} ${meta.unit} · model range`:key==='soil_moisture'?'July · 0–10 cm · GLDAS':'May–September · NASA POWER';
-  return `<div class="metric-tile"><div class="metric-tile-heading">${icon(meta.icon)}${esc(meta.short)}</div><strong>${fmt(m.value,meta.decimals)} <small>${esc(meta.unit)}</small></strong><p>${esc(detail)}</p><span class="metric-change">${esc(changeText)}</span></div>`;
+  const changeText=change===null?'Historical values available through 2025':`${change>=0?'+':''}${fmt(change,meta.decimals)} ${meta.unit} vs ${key==='soil_moisture'?'2000–20 July':'1991–2020'}`;
+  const detail=missing?'Not forecast by current models':year.kind==='projection'?`${fmt(m.low,meta.decimals)}–${fmt(m.high,meta.decimals)} ${meta.unit} · model range`:key==='soil_moisture'?'July · 0–10 cm · GLDAS':'May–September · NASA POWER';
+  return `<div class="metric-tile ${state.layer===key?'selected':''}" data-metric="${key}"><div class="metric-tile-heading">${icon(meta.icon)}${esc(meta.short)}</div><strong class="${missing?'unavailable':''}">${missing?'Not projected':fmt(m.value,meta.decimals)} ${missing?'':`<small>${esc(meta.unit)}</small>`}</strong><p>${esc(detail)}</p><span class="metric-change">${esc(changeText)}</span></div>`;
  }).join('');
  animateContent($('metric-strip'));
 }
@@ -116,7 +117,7 @@ function updateChart(){
 }
 function setYear(year,{stop=true}={}){
  state.year=Math.max(2021,Math.min(2030,Number(year)));if(stop)pause();
- state.request++;state.controller?.abort();$('print-plan').disabled=true;markUpdating();
+ state.request++;state.controller?.abort();markUpdating();
  $('year-range').value=state.year;$('year-range').setAttribute('aria-valuetext',`${state.year}, ${state.year<=2025?'observed history':'climate projection'}`);
  document.querySelectorAll('.year-tick').forEach(b=>{b.classList.toggle('active',+b.dataset.year===state.year);b.setAttribute('aria-pressed',String(+b.dataset.year===state.year));});
  $('previous-year').disabled=state.year===2021;$('next-year').disabled=state.year===2030;
@@ -132,12 +133,12 @@ function play(){
 function cropVisual(name){const n=name.toLowerCase();return n.includes('corn')||n==='maize'?['corn','Corn','corn']:n.includes('soy')?['soy','Soybean','soybean']:['wheat','Wheat','wheat'];}
 function sourceAnchors(text){return [...new Set((text||'').match(/https?:\/\/[^\s)]+/g)||[])].map((url,i)=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Source ${i+1} ↗</a>`).join(' · ');}
 function rotationCard(r,index){
- const water=r.water,low=water?.low_pct,high=water?.high_pct;
- const projected=selected().kind==='projection';
- const range=projected&&water?.ensemble_low_pct!==null?`${fmt(water.ensemble_low_pct,0)}–${fmt(water.ensemble_high_pct,0)}%`:(low!==null&&low!==undefined?`${fmt(low,0)}–${fmt(high,0)}%`:'Not available');
+ const advice=r.water_advice||{},low=advice.low_pct,high=advice.high_pct;
+ const valid=Number.isFinite(low)&&Number.isFinite(high),lo=valid?Math.max(0,Math.min(100,low)):0,hi=valid?Math.max(lo,Math.min(100,high)):0;
+ const scope=(advice.assessed_crops||[]).map(c=>cropVisual(c)[1]).join(' & ');
  const quantity=r.quantity?`<p class="quantity-note ${r.quantity.meets===false?'shortfall':''}">${esc(r.quantity.text)}<br><small>Historical trial comparison, not a forecast.</small></p>`:'';
  const clover=r.id.includes('clover');
- return `<article data-rotation-id="${esc(r.id)}" class="rotation-card ${index===0?'top-pick':''}"><div class="rotation-card-top"><span class="rank-pill"><span class="rank-number">${index+1}</span>${index===0?'TOP MATCH':'ALTERNATIVE'}</span><span class="trial-tag">TRIAL-BASED ROTATION</span></div><div class="crop-sequence" aria-label="${esc(r.name)}">${r.crops.map((c,i)=>{const [id,label,cls]=cropVisual(c);return `${i?'<span class="sequence-arrow" aria-hidden="true">→</span>':''}<div class="crop-step ${cls}">${icon(id)}<span>${label}</span></div>`;}).join('')}</div>${clover?'<span class="clover-tag">+ Red clover cover crop</span>':''}<p class="rotation-label">${clover?'A cover crop fits after winter wheat.':r.crops.length===2?'A simple two-crop rotation.':'A diversified crop sequence.'}</p><div class="water-row"><span>Rain / crop water need ${projected?'· range':''}</span><strong>${esc(range)}</strong></div><div class="water-track" aria-hidden="true"><span style="width:${Math.max(0,Math.min(100,low||0))}%"></span></div><p class="water-scope">Corn/soy water check · winter wheat unassessed</p><div class="rotation-card-bottom"><span>Rain fit / 100 <strong>${fmt(r.planning_score,1)}</strong></span><span>${esc(state.year)} water outlook</span></div>${quantity}<details><summary>Why this rotation?</summary><div class="detail-copy"><p>${esc(r.reason)}</p><p>GAEZ suitability index · ${esc(r.gaez_period)}: ${Object.entries(r.suitability||{}).map(([crop,s])=>`${esc(cropVisual(crop)[1])} ${fmt(s.percent,1)}`).join(' · ')}. Period-based, not an annual success probability.</p><p>${esc(r.soil)} ${sourceAnchors(r.soil_source)}</p><p>Rain only; irrigation and stored soil water are excluded. Winter-wheat water need is not evaluated over May–September.</p><ul>${r.yields.map(y=>`<li>${esc(y.crop)}: ${fmt(y.bu_ac,0)} bu/ac · ${esc(y.status)}. ${sourceAnchors(y.source)}</li>`).join('')}</ul><p>Rain fit is a rule-based planning indicator, not crop success probability. Historical trial index: ${fmt(r.score,1)}. Crops with missing trial yields are excluded from the index.</p>${r.revenue?`<p>Historical-price reference: ${esc(r.revenue)}. Gross revenue, not profit or future earnings.</p>`:''}</div></details></article>`;
+ return `<article data-rotation-id="${esc(r.id)}" class="rotation-card ${index===0?'top-pick':''}"><div class="rotation-card-top"><span class="rank-pill"><span class="rank-number">${index+1}</span>${index===0?'LEADING OPTION':'ALTERNATIVE'}</span><span class="trial-tag">RAIN-LED PLANNING</span></div><div class="crop-sequence" aria-label="${esc(r.name)}">${r.crops.map((c,i)=>{const [id,label,cls]=cropVisual(c);return `${i?'<span class="sequence-arrow" aria-hidden="true">→</span>':''}<div class="crop-step ${cls}">${icon(id)}<span>${label}</span></div>`;}).join('')}</div>${clover?'<span class="clover-tag">+ Red clover cover crop</span>':''}<section class="rain-advice" aria-label="Rain supply compared with crop needs"><div class="water-row"><span>Rain supply vs crop needs</span></div><h3>${valid?`${low}–${high}% covered`:'Not assessed'}</h3><div class="water-track" role="img" aria-label="${esc(advice.meaning||'No water check available')}"><span class="water-base" style="width:${lo}%"></span><span class="water-range" style="left:${lo}%;width:${hi-lo}%"></span></div><div class="water-labels"><span>Estimated rain supply</span><span>100% of needs</span></div><p class="water-meaning">${esc(advice.meaning||'No compatible water check.')}</p><p class="water-action">${esc(advice.action||'')}</p><p class="water-scope">${esc(scope)} assessed${advice.unassessed_crops?.length?' · wheat water not assessed':''}</p></section>${quantity}<details><summary>Why this option?</summary><div class="detail-copy"><p>${esc(r.rank_explanation)}</p><p>${esc(advice.range_explanation)} This is not a chance of crop success. Irrigation and stored soil water are excluded.</p><p>Trial soil evidence: ${esc(r.soil)} ${sourceAnchors(r.soil_source)}</p><ul>${r.yields.map(y=>`<li>${esc(y.crop)}: ${fmt(y.bu_ac,0)} bu/ac · ${esc(y.status)}. ${sourceAnchors(y.source)}</li>`).join('')}</ul><p>Trial yields and period-based GAEZ values are historical references, not annual yield predictions.</p></div></details></article>`;
 }
 function markUpdating(){
  $('panel-body').setAttribute('aria-busy','true');$('panel-body').classList.add('updating');
@@ -160,15 +161,16 @@ function showOption(index,direction=1){
 function renderRecommendations(){
  const data=state.recommendations;
  $('recommendation-year').textContent=`${state.year} OUTLOOK`;
- $('option-nav').hidden=true;$('climate-context').hidden=true;
+ $('option-nav').hidden=true;$('ranking-note').hidden=true;
  if(state.mode==='priority'&&!state.crop){$('results-count').textContent='YOUR CROP COMES FIRST';$('panel-body').innerHTML=`<div class="empty-state">${icon('target')}<strong>Start with your priority.</strong>Choose a crop above. We’ll find supported rotations that make room for it.</div>`;return;}
  if(!data)return;
  if(data.status==='unavailable'){$('results-count').textContent='OUTLOOK UNAVAILABLE';$('panel-body').innerHTML=`<div class="empty-state">${icon('info')}<strong>No invented predictions.</strong>${esc(data.message)}<button class="primary-button" data-view-history>Explore 2025 history</button></div>`;$('panel-body').querySelector('[data-view-history]').onclick=()=>setYear(2025);return;}
  const rows=data.rotations.slice(0,3);$('results-count').textContent=`${rows.length} DATA-LED OPTIONS`;
  if(rows.length){$('option-nav').hidden=false;showOption(state.optionIndex);}
  else $('panel-body').innerHTML='<div class="empty-state"><strong>No supported rotation.</strong>Try a different crop or reset your priority.</div>';
- const context=data.climate_context;
- if(context){$('climate-context').hidden=false;$('climate-context').innerHTML=`<div class="eyebrow">${state.year} · FACTORS BEHIND YOUR OPTIONS</div><div class="context-metrics"><span>${icon('rain')}<strong>${fmt(context.rain_mm,0)}</strong> mm</span><span>${icon('sun')}<strong>${fmt(context.temperature_c,1)}</strong> °C</span><span>${icon('drop')}<strong>${fmt(context.humidity_pct,0)}</strong> %</span></div><p>Ranked by this year’s rain fit, soil checks and sourced rotation evidence. Targets use historical yields.</p>`;}
+ $('ranking-note').textContent=data.ranking_summary||'';
+ $('ranking-note').hidden=!data.rotations.length;
+
 }
 async function loadRecommendations(){
  if(!state.timeline)return;
@@ -181,7 +183,7 @@ async function loadRecommendations(){
  try{
   const data=await jsonGet(`/api/recommendations/harrow?${params}`,state.controller.signal);
   if(request!==state.request)return;
-  state.recommendations=data;state.optionIndex=0;renderRecommendations();$('print-plan').disabled=!data.rotations?.length;$('print-plan').title=data.rotations?.length?'Print your field plan':'Choose a year with available recommendations';
+  state.recommendations=data;state.optionIndex=0;renderRecommendations();
  }catch(error){
   if(error.name==='AbortError'||request!==state.request)return;
   state.recommendations=null;$('results-count').textContent='CONNECTION INTERRUPTED';
@@ -200,15 +202,21 @@ function setMode(mode){
  $('panel-description').textContent=priority?'Build a crop rotation around your choice.':'Evidence-led options for your next growing seasons.';
  loadRecommendations();
 }
-function setCrop(crop){state.crop=crop;$('priority-error').hidden=true;document.querySelectorAll('[data-crop]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.crop===crop)));state.target=null;loadRecommendations();}
-function openSources(){
- pause();const year=selected(),projection=state.timeline.projection;
- $('sources-content').innerHTML=`<section class="source-section"><h3>What you’re seeing</h3><p>${state.year<=2025?'2021–2025 uses observed regional POWER and GLDAS data.':'2026–2030 uses NASA climate-model scenarios under SSP370, not weather forecasts.'} Current view: ${state.year}. ${year?.model_count||0} projection models.</p><p>Temperature, rain and humidity use May–September. Soil moisture is July, 0–10 cm. Winter wheat uses a different growing season.</p></section><section class="source-section"><h3>How to read future values</h3><p>Median and full spread across ${projection.models.length} climate models, aligned to POWER’s 1991–2014 monthly climatology. A 2015–2025 climatology comparison is recorded with the data. The spread is not a confidence interval, and an individual year is not a weather prediction.</p><p>Observed long-term temperature trend: ${fmt(state.timeline.trend?.slope_per_decade,2)} °C per decade, with the north-cell and 1991-start checks recorded in the trend dataset.</p><p>Future soil moisture is not modeled. Static HWSD2 soil values are regional estimates. No surveyed field boundary or field-level temperature hotspots are available.</p></section><section class="source-section"><h3>What a recommendation means</h3><p>${esc(state.recommendations?.ranking||'Historical trial index and sourced drought-resilience evidence; annual climate updates the water check, not the trial yields.')}</p><p>Trial results refer to Woodslee, roughly 25 km from the pilot. The trial index is not accuracy, suitability probability or an annual yield forecast. GAEZ suitability represents a multi-year climate period. Water checks omit irrigation and soil storage.</p><p>${esc(state.recommendations?.method||'')}</p></section><section class="source-section"><h3>Go to the source</h3><ul>${state.timeline.sources.map(s=>`<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)} ↗</a></li>`).join('')}<li><a href="/docs" target="_blank" rel="noopener noreferrer">API documentation ↗</a></li></ul></section>`;
- $('sources-dialog').showModal();
+function setCrop(crop){state.crop=crop;$('yield-target').value='';$('priority-error').hidden=true;document.querySelectorAll('[data-crop]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.crop===crop)));state.target=null;loadRecommendations();}
+function renderSourceTab(tab='data'){
+ document.querySelectorAll('[data-source-tab]').forEach(button=>{const active=button.dataset.sourceTab===tab;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
+ const heading=state.year<=2025?'Observed history':'Climate scenarios';
+ const content={
+  data:`<section class="source-section"><h3>${heading} · ${state.year}</h3><p>Temperature, rain and humidity: May–September. Soil moisture: July, 0–10 cm. Soil profile: static regional reference.</p><ul class="source-links">${state.timeline.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name)} <span>↗</span></a></li>`).join('')}</ul><p class="source-small">The focus outline stays the same for comparison. POWER uses a 0.5° × 0.625° grid; GLDAS and NEX use 0.25°. The smaller display outline does not increase data resolution.</p></section>`,
+  ranking:`<section class="source-section"><h3>Why an option comes first</h3><p>${esc(state.recommendations?.ranking_summary||'Rain coverage, soil pH, historical trial evidence and any selected crop or yield target determine the planning order.')}</p><p>A repeated option can be a genuine result when years remain in the same water-limited range. No options are shuffled just to create variation.</p><p>Rain coverage compares regional rain with FAO crop water-need ranges. A range of 50–89% means roughly 50–89 mm supplied for each 100 mm needed. It is not a success rate.</p></section>`,
+  limits:`<section class="source-section"><h3>What the data cannot promise</h3><ul><li>Future years are climate scenarios, not weather forecasts. Ranges show five-model spread, not probabilities.</li><li>Winter-wheat water is unassessed in the May–September window. Rain checks omit irrigation and soil storage.</li><li>Trial yields refer to Woodslee, about 25 km away. Soil values are regional estimates, not field tests.</li><li>Ranking is rain-led; year-specific heat damage and repeat-cropping penalties are not independently calibrated.</li><li>No future soil moisture, field-level heatmap or annual crop yield is invented.</li></ul></section>`
+ };
+ $('sources-content').innerHTML=content[tab];$('sources-content').scrollTop=0;
 }
+function openSources(){pause();renderSourceTab('data');$('sources-dialog').showModal();}
 function connectControls(){
  document.querySelectorAll('[data-layer]').forEach(b=>b.addEventListener('click',()=>{
-  state.layer=b.dataset.layer;document.querySelectorAll('[data-layer]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});updateMap();updateChart();
+  state.layer=b.dataset.layer;document.querySelectorAll('[data-layer]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});updateMap();updateMetrics();updateChart();
  }));
  $('year-range').addEventListener('input',e=>setYear(e.target.value));
  $('previous-year').onclick=()=>setYear(state.year-1);$('next-year').onclick=()=>setYear(state.year+1);$('play-timeline').onclick=play;
@@ -219,7 +227,7 @@ function connectControls(){
  $('option-nav').addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();showOption(state.optionIndex+(event.key==='ArrowRight'?1:-1));}});
  $('tab-recommendations').onclick=()=>setMode('recommendations');$('nav-overview').onclick=()=>setMode('recommendations');
  $('tab-priority').onclick=()=>setMode('priority');$('nav-priority').onclick=()=>{setMode('priority');if(window.innerWidth<=940)document.querySelector('.recommendation-panel').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});};
- document.querySelectorAll('[role=tab]').forEach(b=>b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();setMode(state.mode==='priority'?'recommendations':'priority');$(`tab-${state.mode}`).focus();}}));
+ document.querySelectorAll('.panel-tab[role=tab]').forEach(b=>b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();setMode(state.mode==='priority'?'recommendations':'priority');$(`tab-${state.mode}`).focus();}}));
  document.querySelectorAll('[data-crop]').forEach(b=>b.onclick=()=>setCrop(b.dataset.crop));
  $('priority-form').onsubmit=e=>{
   e.preventDefault();const value=$('yield-target').value,number=value===''?null:Number(value);
@@ -227,14 +235,15 @@ function connectControls(){
   state.target=number;$('priority-error').hidden=true;loadRecommendations();
  };
  $('reset-priority').onclick=()=>{state.crop=null;state.target=null;$('yield-target').value='';$('priority-error').hidden=true;document.querySelectorAll('[data-crop]').forEach(b=>b.setAttribute('aria-pressed','false'));loadRecommendations();};
- ['nav-sources','map-sources','recommendation-method'].forEach(id=>$(id).onclick=openSources);
+ $('nav-sources').onclick=openSources;
+ document.querySelectorAll('[data-source-tab]').forEach((button,index)=>{button.onclick=()=>renderSourceTab(button.dataset.sourceTab);button.addEventListener('keydown',event=>{if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();const buttons=[...document.querySelectorAll('[data-source-tab]')],next=buttons[(index+(event.key==='ArrowRight'?1:2))%3];renderSourceTab(next.dataset.sourceTab);next.focus();}});});
  $('close-sources').onclick=()=>$('sources-dialog').close();
  $('sources-dialog').addEventListener('click',e=>{if(e.target===$('sources-dialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
- $('print-plan').onclick=()=>{pause();window.print();};$('retry-load').onclick=load;
+ $('retry-load').onclick=load;
  document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
 }
 function dataControls(ready){
- document.querySelectorAll('.layer-button,.rail-button,.year-tick,#year-range,#previous-year,#next-year,#play-timeline,#view-history,.panel-tab,[data-crop],#print-plan,#map-sources,#recommendation-method,#yield-target,#priority-form button').forEach(el=>el.disabled=!ready);
+ document.querySelectorAll('.layer-button,.rail-button,.year-tick,#year-range,#previous-year,#next-year,#play-timeline,#view-history,.panel-tab,[data-crop],#yield-target,#priority-form button').forEach(el=>el.disabled=!ready);
 }
 async function load(){
  setError(null);
