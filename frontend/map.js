@@ -3,7 +3,7 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const state = {year:2026,layer:'temperature',mode:'recommendations',crop:null,target:null,timeline:null,pilot:null,recommendations:null,map:null,cell:null,marker:null,request:0,controller:null,timer:null,pending:null,optionIndex:0};
+const state = {year:2026,layer:'temperature',mode:'recommendations',crop:null,target:null,timeline:null,pilot:null,recommendations:null,map:null,cell:null,marker:null,request:0,controller:null,timer:null,pending:null,optionIndex:0,activeLocation:{id:'harrow',name:'Harrow, Ontario'},locations:[]};
 const layers = {
  temperature:{name:'Growing-season temperature',short:'Temperature',unit:'°C',icon:'sun',decimals:1,low:'Cooler',high:'Warmer',palette:['#367fc2','#f1e9db','#cc4946']},
  precipitation:{name:'Growing-season rainfall',short:'Rainfall',unit:'mm',icon:'rain',decimals:0,low:'Drier',high:'Wetter',palette:['#e2dcf3','#a08bc9','#5d479c']},
@@ -39,6 +39,7 @@ function initMap(){
  const location=state.timeline.location;
  state.map=L.map('map',{zoomControl:false,scrollWheelZoom:false,zoomSnap:.25}).setView([location.lat,location.lon],10);
  L.control.zoom({position:'topright'}).addTo(state.map);
+ state.resizeObserver=new ResizeObserver(()=>state.map.invalidateSize({pan:false}));state.resizeObserver.observe($('map'));
  const tiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery © <a href="https://www.esri.com/">Esri</a>, Vantor, Earthstar Geographics, GIS User Community'}).addTo(state.map);
  tiles.on('tileerror',()=>{$('basemap-note').hidden=false;});tiles.on('tileload',()=>{$('basemap-note').hidden=true;});
  state.marker=L.marker([location.lat,location.lon],{icon:L.divIcon({className:'pilot-marker',html:`<div class="pilot-marker-body">${icon('leaf')}</div>`,iconSize:[32,32],iconAnchor:[16,30]})}).addTo(state.map);
@@ -62,7 +63,7 @@ function updateMap(){
  $('map-unavailable').hidden=!missing;
  if(missing){
   $('map-unavailable').querySelector('strong').textContent=state.layer==='soil_moisture'?'Soil moisture isn’t projected.':'Climate projection unavailable.';
-  $('map-unavailable').querySelector('span').textContent=state.layer==='soil_moisture'?'Explore measured July moisture in the historical view.':year.message||'Choose an observed year while the source data is unavailable.';
+  $('map-unavailable').querySelector('span').textContent=state.layer==='soil_moisture'?(m.unavailable_reason||'No future soil-moisture model is connected.'):year.message||'Choose an observed year while the source data is unavailable.';
  }
  const detail=state.layer==='soil'?'FAO HWSD2 · regional estimate, not a field soil test':future?`${year.model_count}-model range ${fmt(m.low,meta.decimals)}–${fmt(m.high,meta.decimals)} ${meta.unit}`:`${m.source} · cached regional observation`;
  let extra='';
@@ -97,8 +98,8 @@ function updateMetrics(){
   const m=year.metrics[key],meta=layers[key],base=state.timeline.baseline[key],missing=m.value===null;
   const change=missing?null:m.value-base.value;
   const changeText=change===null?'Historical values available through 2025':`${change>=0?'+':''}${fmt(change,meta.decimals)} ${meta.unit} vs ${key==='soil_moisture'?'2000–20 July':'1991–2020'}`;
-  const detail=missing?'Not forecast by current models':year.kind==='projection'?`${fmt(m.low,meta.decimals)}–${fmt(m.high,meta.decimals)} ${meta.unit} · model range`:key==='soil_moisture'?'July · 0–10 cm · GLDAS':'May–September · NASA POWER';
-  return `<div class="metric-tile ${state.layer===key?'selected':''}" data-metric="${key}"><div class="metric-tile-heading">${icon(meta.icon)}${esc(meta.short)}</div><strong class="${missing?'unavailable':''}">${missing?'Not projected':fmt(m.value,meta.decimals)} ${missing?'':`<small>${esc(meta.unit)}</small>`}</strong><p>${esc(detail)}</p><span class="metric-change">${esc(changeText)}</span></div>`;
+  const detail=missing?'No future soil-moisture model connected':year.kind==='projection'?`${fmt(m.low,meta.decimals)}–${fmt(m.high,meta.decimals)} ${meta.unit} · model range`:key==='soil_moisture'?'July · 0–10 cm · GLDAS':'May–September · NASA POWER';
+  return `<div class="metric-tile ${state.layer===key?'selected':''}" data-metric="${key}"><div class="metric-tile-heading">${icon(meta.icon)}${esc(meta.short)}</div><strong class="${missing?'unavailable':''}">${missing?'Not projected':fmt(m.value,meta.decimals)} ${missing?'':`<small>${esc(meta.unit)}</small>`}</strong><p>${esc(detail)}</p>${missing?'':`<span class="metric-change">${esc(changeText)}</span>`}</div>`;
  }).join('');
  animateContent($('metric-strip'));
 }
@@ -135,10 +136,10 @@ function sourceAnchors(text){return [...new Set((text||'').match(/https?:\/\/[^\
 function rotationCard(r,index){
  const advice=r.water_advice||{},low=advice.low_pct,high=advice.high_pct;
  const valid=Number.isFinite(low)&&Number.isFinite(high),lo=valid?Math.max(0,Math.min(100,low)):0,hi=valid?Math.max(lo,Math.min(100,high)):0;
- const scope=(advice.assessed_crops||[]).map(c=>cropVisual(c)[1]).join(' & ');
- const quantity=r.quantity?`<p class="quantity-note ${r.quantity.meets===false?'shortfall':''}">${esc(r.quantity.text)}<br><small>Historical trial comparison, not a forecast.</small></p>`:'';
+ const waterCrops=(advice.assessed_crops||[]).map(c=>cropVisual(c)[1].toLowerCase()).join(' & ');
+ const quantity=r.quantity?`<p class="quantity-note ${r.quantity.meets===false?'shortfall':''}">${esc(r.quantity.text)}<br></p>`:'';
  const clover=r.id.includes('clover');
- return `<article data-rotation-id="${esc(r.id)}" class="rotation-card ${index===0?'top-pick':''}"><div class="rotation-card-top"><span class="rank-pill"><span class="rank-number">${index+1}</span>${index===0?'LEADING OPTION':'ALTERNATIVE'}</span><span class="trial-tag">RAIN-LED PLANNING</span></div><div class="crop-sequence" aria-label="${esc(r.name)}">${r.crops.map((c,i)=>{const [id,label,cls]=cropVisual(c);return `${i?'<span class="sequence-arrow" aria-hidden="true">→</span>':''}<div class="crop-step ${cls}">${icon(id)}<span>${label}</span></div>`;}).join('')}</div>${clover?'<span class="clover-tag">+ Red clover cover crop</span>':''}<section class="rain-advice" aria-label="Rain supply compared with crop needs"><div class="water-row"><span>Rain supply vs crop needs</span></div><h3>${valid?`${low}–${high}% covered`:'Not assessed'}</h3><div class="water-track" role="img" aria-label="${esc(advice.meaning||'No water check available')}"><span class="water-base" style="width:${lo}%"></span><span class="water-range" style="left:${lo}%;width:${hi-lo}%"></span></div><div class="water-labels"><span>Estimated rain supply</span><span>100% of needs</span></div><p class="water-meaning">${esc(advice.meaning||'No compatible water check.')}</p><p class="water-action">${esc(advice.action||'')}</p><p class="water-scope">${esc(scope)} assessed${advice.unassessed_crops?.length?' · wheat water not assessed':''}</p></section>${quantity}<details><summary>Why this option?</summary><div class="detail-copy"><p>${esc(r.rank_explanation)}</p><p>${esc(advice.range_explanation)} This is not a chance of crop success. Irrigation and stored soil water are excluded.</p><p>Trial soil evidence: ${esc(r.soil)} ${sourceAnchors(r.soil_source)}</p><ul>${r.yields.map(y=>`<li>${esc(y.crop)}: ${fmt(y.bu_ac,0)} bu/ac · ${esc(y.status)}. ${sourceAnchors(y.source)}</li>`).join('')}</ul><p>Trial yields and period-based GAEZ values are historical references, not annual yield predictions.</p></div></details></article>`;
+ return `<article data-rotation-id="${esc(r.id)}" class="rotation-card ${index===0?'top-pick':''}"><div class="rotation-card-top"><span class="rank-pill"><span class="rank-number">${index+1}</span>${index===0?'LEADING OPTION':'ALTERNATIVE'}</span><span class="trial-tag">RAIN-LED PLANNING</span></div><div class="crop-sequence" aria-label="${esc(r.name)}">${r.crops.map((c,i)=>{const [id,label,cls]=cropVisual(c);return `${i?'<span class="sequence-arrow" aria-hidden="true">→</span>':''}<div class="crop-step ${cls}">${icon(id)}<span>${label}</span></div>`;}).join('')}</div>${clover?'<span class="clover-tag">+ Red clover cover crop</span>':''}<section class="rain-advice" aria-label="Rain supply compared with crop needs"><div class="water-row"><span>Rain vs ${esc(waterCrops||'crop')} needs</span></div><h3>${valid?`${low}–${high}% covered`:'Not assessed'}</h3><div class="water-track" role="img" aria-label="${esc(advice.meaning||'No water check available')}"><span class="water-base" style="width:${lo}%"></span><span class="water-range" style="left:${lo}%;width:${hi-lo}%"></span></div><div class="water-labels"><span>Estimated rain supply</span><span>100% of needs</span></div><p class="water-meaning">${esc(advice.meaning||'No compatible water check.')}</p><p class="water-action">${esc(advice.action||'')}</p></section>${quantity}<details><summary>Why this option?</summary><div class="detail-copy"><p>${esc(r.rank_explanation)}</p><p>${esc(advice.range_explanation)} This is not a chance of crop success. Irrigation and stored soil water are excluded.</p><p>Trial soil evidence: ${esc(r.soil)} ${sourceAnchors(r.soil_source)}</p><ul>${r.yields.map(y=>`<li>${esc(y.crop)}: ${fmt(y.bu_ac,0)} bu/ac · ${esc(y.status)}. ${sourceAnchors(y.source)}</li>`).join('')}</ul><p>Trial yields and period-based GAEZ values are historical references, not annual yield predictions.</p></div></details></article>`;
 }
 function markUpdating(){
  $('panel-body').setAttribute('aria-busy','true');$('panel-body').classList.add('updating');
@@ -161,19 +162,17 @@ function showOption(index,direction=1){
 function renderRecommendations(){
  const data=state.recommendations;
  $('recommendation-year').textContent=`${state.year} OUTLOOK`;
- $('option-nav').hidden=true;$('ranking-note').hidden=true;
+ $('option-nav').hidden=true;
  if(state.mode==='priority'&&!state.crop){$('results-count').textContent='YOUR CROP COMES FIRST';$('panel-body').innerHTML=`<div class="empty-state">${icon('target')}<strong>Start with your priority.</strong>Choose a crop above. We’ll find supported rotations that make room for it.</div>`;return;}
  if(!data)return;
  if(data.status==='unavailable'){$('results-count').textContent='OUTLOOK UNAVAILABLE';$('panel-body').innerHTML=`<div class="empty-state">${icon('info')}<strong>No invented predictions.</strong>${esc(data.message)}<button class="primary-button" data-view-history>Explore 2025 history</button></div>`;$('panel-body').querySelector('[data-view-history]').onclick=()=>setYear(2025);return;}
  const rows=data.rotations.slice(0,3);$('results-count').textContent=`${rows.length} DATA-LED OPTIONS`;
  if(rows.length){$('option-nav').hidden=false;showOption(state.optionIndex);}
  else $('panel-body').innerHTML='<div class="empty-state"><strong>No supported rotation.</strong>Try a different crop or reset your priority.</div>';
- $('ranking-note').textContent=data.ranking_summary||'';
- $('ranking-note').hidden=!data.rotations.length;
 
 }
 async function loadRecommendations(){
- if(!state.timeline)return;
+ if(!state.timeline||state.activeLocation.id!=='harrow')return;
  const request=++state.request;state.controller?.abort();state.controller=new AbortController();
  if(state.mode==='priority'&&!state.crop){state.recommendations=null;$('panel-body').setAttribute('aria-busy','false');$('panel-body').classList.remove('updating');renderRecommendations();return;}
  const params=new URLSearchParams({year:state.year});
@@ -196,24 +195,63 @@ function setMode(mode){
  $('priority-form').hidden=!priority;
  ['recommendations','priority'].forEach(name=>{const active=name===mode;$(`tab-${name}`).classList.toggle('active',active);$(`tab-${name}`).setAttribute('aria-selected',String(active));$(`tab-${name}`).tabIndex=active?0:-1;});
  $('panel-body').setAttribute('aria-labelledby',`tab-${mode}`);
- $('nav-overview').classList.toggle('active',!priority);$('nav-priority').classList.toggle('active',priority);
- $('panel-eyebrow').textContent=priority?'YOUR CROP. A STRONGER PLAN.':'GROW WITH A PLAN';
  $('panel-title').textContent=priority?'Make room for your priority.':'A rotation for what’s next.';
- $('panel-description').textContent=priority?'Build a crop rotation around your choice.':'Evidence-led options for your next growing seasons.';
+ updateTargetControl();
  loadRecommendations();
 }
-function setCrop(crop){state.crop=crop;$('yield-target').value='';$('priority-error').hidden=true;document.querySelectorAll('[data-crop]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.crop===crop)));state.target=null;loadRecommendations();}
+function setCrop(crop){state.crop=crop;$('yield-target').value='';$('priority-error').hidden=true;document.querySelectorAll('[data-crop]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.crop===crop)));state.target=null;updateTargetControl();loadRecommendations();}
 function renderSourceTab(tab='data'){
  document.querySelectorAll('[data-source-tab]').forEach(button=>{const active=button.dataset.sourceTab===tab;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;});
- const heading=state.year<=2025?'Observed history':'Climate scenarios';
+ const heading=state.activeLocation.id!=='harrow'?'Harrow pilot sources':state.year<=2025?'Observed history':'Climate scenarios';
  const content={
-  data:`<section class="source-section"><h3>${heading} · ${state.year}</h3><p>Temperature, rain and humidity: May–September. Soil moisture: July, 0–10 cm. Soil profile: static regional reference.</p><ul class="source-links">${state.timeline.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name)} <span>↗</span></a></li>`).join('')}</ul><p class="source-small">The focus outline stays the same for comparison. POWER uses a 0.5° × 0.625° grid; GLDAS and NEX use 0.25°. The smaller display outline does not increase data resolution.</p></section>`,
+  data:`<section class="source-section"><h3>${heading} · ${state.year}</h3><p>${state.activeLocation.id!=='harrow'?'No datasets are connected for the selected location. These links describe the Harrow pilot. ':''}Temperature, rain and humidity: May–September. Soil moisture: July, 0–10 cm. Soil profile: static regional reference.</p><ul class="source-links">${state.timeline.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name)} <span>↗</span></a></li>`).join('')}</ul><p class="source-small">The focus outline stays the same for comparison. POWER uses a 0.5° × 0.625° grid; GLDAS and NEX use 0.25°. The smaller display outline does not increase data resolution.</p></section>`,
   ranking:`<section class="source-section"><h3>Why an option comes first</h3><p>${esc(state.recommendations?.ranking_summary||'Rain coverage, soil pH, historical trial evidence and any selected crop or yield target determine the planning order.')}</p><p>A repeated option can be a genuine result when years remain in the same water-limited range. No options are shuffled just to create variation.</p><p>Rain coverage compares regional rain with FAO crop water-need ranges. A range of 50–89% means roughly 50–89 mm supplied for each 100 mm needed. It is not a success rate.</p></section>`,
   limits:`<section class="source-section"><h3>What the data cannot promise</h3><ul><li>Future years are climate scenarios, not weather forecasts. Ranges show five-model spread, not probabilities.</li><li>Winter-wheat water is unassessed in the May–September window. Rain checks omit irrigation and soil storage.</li><li>Trial yields refer to Woodslee, about 25 km away. Soil values are regional estimates, not field tests.</li><li>Ranking is rain-led; year-specific heat damage and repeat-cropping penalties are not independently calibrated.</li><li>No future soil moisture, field-level heatmap or annual crop yield is invented.</li></ul></section>`
  };
  $('sources-content').innerHTML=content[tab];$('sources-content').scrollTop=0;
 }
 function openSources(){pause();renderSourceTab('data');$('sources-dialog').showModal();}
+function updateTargetControl(){
+ const support=state.timeline?.priority_crops?.[state.crop],unsupported=support&&!support.supported;
+ $('yield-target').disabled=!state.crop||Boolean(unsupported);
+ $('yield-target').placeholder=unsupported?'Yield reference unavailable':'e.g. 150';
+ document.querySelector('label[for="yield-target"]').hidden=Boolean(unsupported);document.querySelector('.target-input').hidden=Boolean(unsupported);
+ $('priority-form').querySelector('[type=submit]').innerHTML=(unsupported?'Show compatible rotations':'Build my rotation')+icon('arrow');
+ $('priority-notice').hidden=!unsupported;
+ $('priority-notice').textContent=unsupported?support.message+' Compatible rotations are shown without a yield target.':'';
+ if(unsupported){state.target=null;$('yield-target').value='';}
+}
+function refreshLocations(){
+ const select=$('location-select');select.querySelectorAll('option[data-custom]').forEach(option=>option.remove());
+ for(const location of state.locations){const option=new Option(location.name,location.id);option.dataset.custom='true';select.add(option,select.querySelector('[value=add]'));}
+}
+function chooseLocation(id){
+ const location=id==='harrow'?{id:'harrow',name:'Harrow, Ontario'}:state.locations.find(item=>item.id===id);
+ if(!location)return;
+ pause();clearTimeout(state.pending);state.request++;state.controller?.abort();state.activeLocation=location;
+ $('location-select').value=id;$('add-location-panel').hidden=true;
+ const connected=id==='harrow';$('dashboard').hidden=!connected;$('location-empty').hidden=connected;
+ if(!connected){$('location-empty-title').textContent=location.name;return;}
+ if(state.timeline){if(!state.map)initMap();requestAnimationFrame(()=>state.map?.invalidateSize({pan:false}));setYear(state.year);}
+ else load();
+}
+function closeLocationForm(){ $('add-location-panel').hidden=true;$('location-select').value=state.activeLocation.id; }
+function connectLocations(){
+ try{const saved=JSON.parse(localStorage.getItem('fieldshift.locations')||'[]');state.locations=Array.isArray(saved)?saved.filter(item=>typeof item.id==='string'&&item.id.startsWith('custom-')&&typeof item.name==='string'&&Number.isFinite(item.lat)&&Number.isFinite(item.lon)&&Math.abs(item.lat)<=90&&Math.abs(item.lon)<=180):[];}catch{state.locations=[];}
+ refreshLocations();
+ $('location-select').onchange=()=>{const id=$('location-select').value;if(id==='add'){$('add-location-panel').hidden=false;$('location-form-error').hidden=true;$('location-name').focus();}else chooseLocation(id);};
+ $('cancel-location').onclick=closeLocationForm;$('return-harrow').onclick=()=>chooseLocation('harrow');
+ $('add-location-form').onsubmit=event=>{
+  event.preventDefault();const name=$('location-name').value.trim(),lat=Number($('location-lat').value),lon=Number($('location-lon').value);
+  const duplicate=[{name:'Harrow, Ontario'},...state.locations].some(location=>location.name.toLowerCase()===name.toLowerCase());
+  if(!name||!$('location-lat').value||!$('location-lon').value||!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||duplicate){$('location-form-error').textContent=duplicate?'Choose a different location name.':'Enter a name and valid latitude/longitude.';$('location-form-error').hidden=false;return;}
+  const location={id:'custom-'+crypto.randomUUID(),name,lat,lon};state.locations.push(location);
+  try{localStorage.setItem('fieldshift.locations',JSON.stringify(state.locations));}catch{/* Session-only bookmarks remain usable. */}
+  refreshLocations();$('add-location-form').reset();chooseLocation(location.id);
+ };
+ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('add-location-panel').hidden){closeLocationForm();$('location-select').focus();}});
+ document.addEventListener('click',event=>{if(!event.target.closest('.location-control')&&!$('add-location-panel').hidden)closeLocationForm();});
+}
 function connectControls(){
  document.querySelectorAll('[data-layer]').forEach(b=>b.addEventListener('click',()=>{
   state.layer=b.dataset.layer;document.querySelectorAll('[data-layer]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});updateMap();updateMetrics();updateChart();
@@ -225,8 +263,8 @@ function connectControls(){
  $('view-history').onclick=()=>setYear(2025);
  $('previous-option').onclick=()=>showOption(state.optionIndex-1,-1);$('next-option').onclick=()=>showOption(state.optionIndex+1,1);
  $('option-nav').addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();showOption(state.optionIndex+(event.key==='ArrowRight'?1:-1));}});
- $('tab-recommendations').onclick=()=>setMode('recommendations');$('nav-overview').onclick=()=>setMode('recommendations');
- $('tab-priority').onclick=()=>setMode('priority');$('nav-priority').onclick=()=>{setMode('priority');if(window.innerWidth<=940)document.querySelector('.recommendation-panel').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});};
+ $('tab-recommendations').onclick=()=>setMode('recommendations');
+ $('tab-priority').onclick=()=>setMode('priority');
  document.querySelectorAll('.panel-tab[role=tab]').forEach(b=>b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();setMode(state.mode==='priority'?'recommendations':'priority');$(`tab-${state.mode}`).focus();}}));
  document.querySelectorAll('[data-crop]').forEach(b=>b.onclick=()=>setCrop(b.dataset.crop));
  $('priority-form').onsubmit=e=>{
@@ -234,7 +272,7 @@ function connectControls(){
   if(!state.crop||number!==null&&(!Number.isFinite(number)||number<=0)){$('priority-error').textContent=!state.crop?'Choose a priority crop first.':'Enter a positive yield target in bu/ac.';$('priority-error').hidden=false;return;}
   state.target=number;$('priority-error').hidden=true;loadRecommendations();
  };
- $('reset-priority').onclick=()=>{state.crop=null;state.target=null;$('yield-target').value='';$('priority-error').hidden=true;document.querySelectorAll('[data-crop]').forEach(b=>b.setAttribute('aria-pressed','false'));loadRecommendations();};
+ $('reset-priority').onclick=()=>{state.crop=null;state.target=null;$('yield-target').value='';$('priority-error').hidden=true;document.querySelectorAll('[data-crop]').forEach(b=>b.setAttribute('aria-pressed','false'));updateTargetControl();loadRecommendations();};
  $('nav-sources').onclick=openSources;
  document.querySelectorAll('[data-source-tab]').forEach((button,index)=>{button.onclick=()=>renderSourceTab(button.dataset.sourceTab);button.addEventListener('keydown',event=>{if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();const buttons=[...document.querySelectorAll('[data-source-tab]')],next=buttons[(index+(event.key==='ArrowRight'?1:2))%3];renderSourceTab(next.dataset.sourceTab);next.focus();}});});
  $('close-sources').onclick=()=>$('sources-dialog').close();
@@ -243,17 +281,19 @@ function connectControls(){
  document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
 }
 function dataControls(ready){
- document.querySelectorAll('.layer-button,.rail-button,.year-tick,#year-range,#previous-year,#next-year,#play-timeline,#view-history,.panel-tab,[data-crop],#yield-target,#priority-form button').forEach(el=>el.disabled=!ready);
+ document.querySelectorAll('.layer-button,#nav-sources,.year-tick,#year-range,#previous-year,#next-year,#play-timeline,#view-history,.panel-tab,[data-crop],#yield-target,#priority-form button').forEach(el=>el.disabled=!ready);
+ if(ready)updateTargetControl();
 }
 async function load(){
  setError(null);
  try{
   const [timeline,pilot]=await Promise.all([jsonGet('/api/timeline/harrow'),jsonGet('/api/pilot')]);
   state.timeline=timeline;state.pilot=pilot;
-  if(!state.map)initMap();dataControls(true);setYear(state.year);
+  dataControls(true);if(state.activeLocation.id==='harrow'){if(!state.map)initMap();setYear(state.year);}
  }catch(error){setError('The cached field data couldn’t be loaded. '+error.message);$('data-badge').textContent='Data unavailable';$('panel-body').innerHTML='<div class="empty-state"><strong>Your data stays honest.</strong>Reconnect to the local API and try again. No sample predictions are being substituted.</div>';}
 }
 connectControls();
+connectLocations();
 // Disable controls until the dataset has loaded; the retry button stays available.
 dataControls(false);
 load();

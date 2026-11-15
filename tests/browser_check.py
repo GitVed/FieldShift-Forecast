@@ -10,6 +10,12 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
 
 
+def assert_aligned_panels(page):
+    page.wait_for_function("""()=>{const a=document.querySelector('.map-card').getBoundingClientRect(),b=document.querySelector('.recommendation-panel').getBoundingClientRect();return Math.abs(a.top-b.top)<2&&Math.abs(a.bottom-b.bottom)<2;}""")
+    positions=page.evaluate("""()=>{const a=document.querySelector('.layer-toolbar').getBoundingClientRect(),b=document.querySelector('.panel-tabs').getBoundingClientRect();return [a.top-b.top,a.bottom-b.bottom];}""")
+    assert all(abs(value)<2 for value in positions),positions
+
+
 def run(url,historical_preview=False):
     root=Path(__file__).resolve().parents[1];artifacts=root/'.cache/browser';artifacts.mkdir(parents=True,exist_ok=True)
     with sync_playwright() as p:
@@ -33,8 +39,9 @@ def run(url,historical_preview=False):
         expect(page.locator('#locate-field,#reset-map,#print-plan,.brand,.rail-avatar,#map-sources,#recommendation-method,#climate-context')).to_have_count(0)
         expect(page.locator('#location-select option')).to_have_count(2)
         expect(page.locator('#location-select')).to_have_value('harrow')
-        assert page.locator('#location-select option[value=add]').evaluate('(option)=>option.disabled')
+        assert not page.locator('#location-select option[value=add]').evaluate('(option)=>option.disabled')
         expect(page.locator('.wordmark')).to_have_text('FieldShift')
+        expect(page.locator('.rail,#nav-overview,#nav-priority,.input-note,.water-scope')).to_have_count(0)
         expect(page.locator('.metric-tile')).to_have_count(4)
         expect(page.locator('.water-meaning')).to_contain_text('every 100 mm')
         focus=page.evaluate('state.cell.getBounds().toBBoxString()')
@@ -66,10 +73,14 @@ def run(url,historical_preview=False):
         assert page.locator('.rotation-card').get_attribute('data-rotation-id')!=wet_first
         page.locator('[data-layer="temperature"]').click()
         page.locator('#tab-priority').click();expect(page.locator('#priority-form')).to_be_visible()
+        assert_aligned_panels(page)
         expect(page.locator('#panel-body')).to_contain_text('Choose a crop')
         for crop,label in [('maize','Corn'),('soybean','Soybean'),('wheat','Wheat')]:
             page.locator(f'[data-crop="{crop}"]').click()
             expect(page.locator('#panel-body[aria-busy="false"]')).to_be_visible()
+            if crop=='wheat':
+                expect(page.locator('#yield-target')).to_be_disabled()
+                expect(page.locator('#priority-notice')).to_contain_text('without a yield target')
             for card in page.locator('.rotation-card').all():assert label in card.locator('.crop-sequence').inner_text()
         page.locator('[data-crop="maize"]').click();page.locator('#yield-target').fill('150');page.locator('#priority-form [type=submit]').click()
         expect(page.locator('.quantity-note').first).to_be_visible()
@@ -86,6 +97,7 @@ def run(url,historical_preview=False):
         expect(page.locator('#panel-body')).to_contain_text('Choose a crop')
         page.locator('#tab-priority').focus();page.keyboard.press('ArrowLeft');expect(page.locator('#tab-recommendations')).to_have_attribute('aria-selected','true')
         expect(page.locator('.rotation-card')).to_have_count(1)
+        assert_aligned_panels(page)
         page.locator('.rotation-card summary').first.click();expect(page.locator('.rotation-card details').first).to_have_attribute('open','')
         page.locator('#nav-sources').click();expect(page.locator('#sources-dialog')).to_be_visible()
         page.locator('[data-source-tab=ranking]').click();expect(page.locator('#sources-content')).to_contain_text('50–89 mm')
@@ -123,6 +135,20 @@ def run(url,historical_preview=False):
         page.emulate_media(reduced_motion='reduce')
         assert page.locator('.leaflet-interactive').first.evaluate('(e)=>getComputedStyle(e).transitionDuration')=='0s'
         assert not errors,errors
+        # Add location is an enabled dropdown form; no borrowed Harrow data.
+        page.locator('#location-select').select_option('add')
+        expect(page.locator('#add-location-panel')).to_be_visible()
+        expect(page.locator('#sources-dialog')).to_be_hidden()
+        page.locator('#location-name').fill('Test farm')
+        page.locator('#location-lat').fill('43.2');page.locator('#location-lon').fill('-81.4')
+        page.locator('#add-location-form [type=submit]').click()
+        expect(page.locator('#location-empty')).to_be_visible();expect(page.locator('#dashboard')).to_be_hidden()
+        expect(page.locator('#location-empty-title')).to_have_text('Test farm')
+        assert page.evaluate("JSON.parse(localStorage.getItem('fieldshift.locations')).length")==1
+        page.locator('#return-harrow').click();expect(page.locator('#dashboard')).to_be_visible()
+        expect(page.locator('#location-select')).to_have_value('harrow')
+        page.locator('#location-select').select_option('add');page.locator('#cancel-location').click()
+        expect(page.locator('#add-location-panel')).to_be_hidden()
         # Initial API failure has an honest error state and a working retry.
         other=context.new_page();other.route('**/api/timeline/**',lambda route:route.fulfill(status=503,content_type='application/json',body='{"detail":"Unavailable"}'))
         other.goto(url);expect(other.locator('#load-error')).to_be_visible();expect(other.locator('#year-range')).to_be_disabled()

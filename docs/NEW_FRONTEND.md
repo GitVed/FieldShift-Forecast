@@ -50,7 +50,7 @@ Controls remain disabled until initial data is loaded. Reduced-motion preference
 
 ## Verification recorded 2026-11-15
 
-- All 86 backend/data tests passed, including the existing model and rotation tests.
+- All 88 backend/data tests passed, including the existing model and rotation tests.
 - Full Chromium interaction checks passed with the real five-model cache, mobile layout, reduced motion, blocked basemap tiles, failed-API retry and concise water explanations.
 - A separate online check loaded all 12 requested map tiles and the local fonts without page errors.
 - All 600 original point-response hashes were verified. The delivered CSVs contain 7,200 extracted monthly rows, 2,880 aligned monthly rows and 15 climatology-comparison rows.
@@ -72,7 +72,7 @@ The code is checked out in the main project directory on `devs/new-frontend`; th
 
 ## Interface simplification
 
-The header uses a text-only FieldShift wordmark and a native location dropdown. Harrow is the sole active location; Add location is a disabled coming-soon option. Print, account/avatar and duplicate Sources controls have been removed. A single sidebar Sources button opens short Data, How we rank and Limits tabs with a discreet scrollbar only when needed.
+The header uses a text-only FieldShift wordmark and a native location dropdown. Harrow is the sole data-connected location; Add location opens a plain dropdown form and saves browser-local bookmarks. Saved locations have an explicit no-data state until datasets are connected. Print, account/avatar and duplicate Sources controls have been removed. A single header Sources button opens short Data, How we rank and Limits tabs with a discreet scrollbar only when needed.
 
 The metric row always contains temperature, rainfall, humidity and July soil moisture in the same order and equal-size cards. Future soil moisture is explicitly unavailable. Climate values are not repeated in map cards or recommendation-side summary boxes. Soil properties have a separate static profile view.
 
@@ -81,3 +81,15 @@ A fixed focus rectangle around Harrow provides consistent framing for all layers
 The primary recommendation replaces the opaque /100 rain-fit number with rain coverage and a plain quantity explanation: a range of 50–89 percent means roughly 50–89 mm of regional rain for each 100 mm the assessed crops may need. Range causes, omitted wheat water, irrigation and soil-storage limits remain explicit. Similar future rankings are genuine outputs of the existing rain-first rule: all five future median rain totals remain below the lower FAO need bounds; the wet 2021 case and crop/target constraints are covered by regression tests. No rotations are shuffled to force a different answer.
 
 Repeated future matches reflect a limitation of the rain-led planning policy, not a cached frontend response. The current ranking does not independently calibrate year-specific heat damage or repeated-soybean soil/disease penalties; historical trial evidence remains a separate input.
+
+## Full-width workspace and supported targets
+
+The left rail is removed and Sources is in the header. The map and recommendations share aligned top and bottom edges, and the map-layer and Recommendations/Priority control rows align. A full-width metrics row sits below both panels. Crop selection and the timeline retain their previous state when switching modes. Minor helper copy is removed; major missing-data notices remain.
+
+Add location uses an ordinary anchored white form, not a modal or blurred overlay. Name and latitude/longitude are validated and stored in browser localStorage. Selecting a custom bookmark hides the Harrow dashboard and shows a clear not-connected state. Return to Harrow restores its view; no Harrow numbers are relabeled as another location. No remote data acquisition or account is implied.
+
+Crop-target support is derived from the actual verified/derived trial references. Wheat currently has no supported yield reference, so its target field is hidden/disabled and a prominent explanation is shown. Compatible wheat rotations are still displayed. The annual recommendations endpoint rejects an unsupported wheat target with HTTP 422 rather than silently ranking unknown yields. If supported wheat references are added later, the UI can enable targets from the returned capability metadata. Legacy model routes retain their contracts.
+
+Future soil-moisture values remain null: the connected NEX projection cache contains temperature, rain and humidity, not a soil-moisture model. Cached GLDAS observations end in 2025. This is a connected-data limitation, not a claim that NASA stopped producing observations. The unavailable view states that reason and links back to historical measurements.
+
+Verification includes 88 backend/data tests plus Chromium checks for panel/control-row alignment, no rail, all supported crop controls, wheat-target rejection, saved-location isolation, form cancel/return, stable metrics, sources, map layers, timeline, retries and mobile layout.

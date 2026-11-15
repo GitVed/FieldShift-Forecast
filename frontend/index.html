@@ -22,17 +22,12 @@
 </defs></svg>
 <a href="#main" class="skip">Skip to field outlook</a>
 <div class="app-shell">
-<aside class="rail" aria-label="Workspace navigation">
-<button class="rail-button active" id="nav-overview" aria-label="Recommendations" title="Recommendations"><svg><use href="#i-map"/></svg><span>Explore</span></button>
-<button class="rail-button" id="nav-priority" aria-label="Priority crop" title="Priority crop"><svg><use href="#i-target"/></svg><span>Priority</span></button>
-<button class="rail-button rail-bottom" id="nav-sources" aria-label="View data sources" title="Data sources"><svg><use href="#i-info"/></svg><span>Sources</span></button>
-</aside>
 <div class="workspace">
-<header class="topbar"><a class="wordmark" href="./" aria-label="FieldShift home">FieldShift</a><div class="topbar-right"><label class="location-picker"><span class="status-dot" aria-hidden="true"></span><select id="location-select" aria-label="Location"><option value="harrow">Harrow, Ontario</option><option value="add" disabled>Add location — coming soon</option></select></label></div></header>
+<header class="topbar"><a class="wordmark" href="./" aria-label="FieldShift home">FieldShift</a><div class="topbar-right"><button class="header-source-button" id="nav-sources" aria-label="View data sources"><svg><use href="#i-info"/></svg>Sources</button><div class="location-control"><label class="location-picker"><span class="status-dot" aria-hidden="true"></span><select id="location-select" aria-label="Location"><option value="harrow">Harrow, Ontario</option><option value="add">+ Add location</option></select></label><section id="add-location-panel" class="add-location-panel" hidden aria-label="Add location"><h2>Add a location</h2><form id="add-location-form"><label for="location-name">Location name</label><input id="location-name" type="text" required maxlength="80" placeholder="e.g. My farm"><div class="coordinate-fields"><label>Latitude<input id="location-lat" type="number" min="-90" max="90" step="any" required placeholder="42.0356"></label><label>Longitude<input id="location-lon" type="number" min="-180" max="180" step="any" required placeholder="-82.9183"></label></div><p id="location-form-error" role="alert" hidden></p><div class="location-actions"><button class="primary-button" type="submit">Save location</button><button class="text-button" type="button" id="cancel-location">Cancel</button></div></form></section></div></div></header>
 <main id="main">
-<section class="page-heading"><div><div class="eyebrow">A LITTLE MORE CLARITY. A BETTER NEXT SEASON.</div><h1>Your field. A future worth planning.</h1><p>Explore the conditions. Find a rotation that fits.</p></div></section>
+<section class="page-heading"><div><h1>Your field. A future worth planning.</h1></div></section>
 <div id="load-error" class="error-banner" hidden role="alert"><span id="error-message"></span><button id="retry-load">Try again</button></div>
-<div class="dashboard">
+<section id="location-empty" class="location-empty" hidden><h2 id="location-empty-title">Location saved</h2><p>Climate data and crop recommendations are not connected for this location yet.</p><button class="primary-button" id="return-harrow">Return to Harrow</button></section><div class="dashboard" id="dashboard">
 <section class="explorer" aria-label="Interactive field outlook">
 <div class="map-card">
 <header class="map-header"><div><span class="eyebrow">YOUR REGIONAL OUTLOOK</span><h2>Harrow &amp; the seasons ahead <span class="year-inline" id="heading-year">2026</span></h2></div><span class="data-badge" id="data-badge">Loading data</span></header>
@@ -60,17 +55,18 @@
 <div class="year-ticks" id="year-ticks"></div></div><div class="timeline-periods"><span><i></i>Observed history</span><span><i></i>Projected climate · SSP370</span></div>
 </section>
 </div>
-<div class="metric-strip" id="metric-strip" aria-live="polite"><div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div></div>
-<div class="outlook-footnote"><svg><use href="#i-info"/></svg><span id="outlook-footnote">Future values are climate scenarios, not forecasts of actual weather. Field boundary not surveyed.</span></div>
+
 </section>
 <aside class="recommendation-panel" aria-label="Crop rotation recommendations">
+<div class="panel-intro"><h2 id="panel-title">A rotation for what’s next.</h2></div>
 <div class="panel-tabs" role="tablist" aria-label="Recommendation mode"><button id="tab-recommendations" role="tab" aria-selected="true" aria-controls="panel-body" class="panel-tab active">Recommendations</button><button id="tab-priority" role="tab" aria-selected="false" aria-controls="panel-body" class="panel-tab"><svg><use href="#i-target"/></svg>Priority</button></div>
-<div class="panel-intro"><span class="eyebrow" id="panel-eyebrow">GROW WITH A PLAN</span><h2 id="panel-title">A rotation for what’s next.</h2><p id="panel-description">Evidence-led options for your next growing seasons.</p></div>
-<form class="priority-form" id="priority-form" hidden><fieldset><legend>What do you want to grow?</legend><div class="crop-picker"><button type="button" data-crop="maize" aria-pressed="false"><svg><use href="#i-corn"/></svg><span>Corn</span></button><button type="button" data-crop="soybean" aria-pressed="false"><svg><use href="#i-soy"/></svg><span>Soybean</span></button><button type="button" data-crop="wheat" aria-pressed="false"><svg><use href="#i-wheat"/></svg><span>Wheat</span></button></div></fieldset><label for="yield-target">Your yield target <span>optional</span></label><div class="target-input"><input id="yield-target" type="number" min="0.1" step="0.1" placeholder="e.g. 150" inputmode="decimal"><span>bu/ac</span></div><div class="form-actions"><button class="primary-button" type="submit">Build my rotation <svg><use href="#i-arrow"/></svg></button><button type="button" id="reset-priority" class="text-button">Reset</button></div><p id="priority-error" class="form-error" role="alert" hidden></p><p class="input-note">Targets are checked against historical trial yields.</p></form>
-<p id="ranking-note" class="ranking-note" hidden></p><div class="panel-results-heading"><span id="results-count">FINDING YOUR OPTIONS</span><span id="recommendation-year">2026 OUTLOOK</span></div>
+<form class="priority-form" id="priority-form" hidden><fieldset><legend>What do you want to grow?</legend><div class="crop-picker"><button type="button" data-crop="maize" aria-pressed="false"><svg><use href="#i-corn"/></svg><span>Corn</span></button><button type="button" data-crop="soybean" aria-pressed="false"><svg><use href="#i-soy"/></svg><span>Soybean</span></button><button type="button" data-crop="wheat" aria-pressed="false"><svg><use href="#i-wheat"/></svg><span>Wheat</span></button></div></fieldset><label for="yield-target">Your yield target <span>optional</span></label><div class="target-input"><input id="yield-target" type="number" min="0.1" step="0.1" placeholder="e.g. 150" inputmode="decimal"><span>bu/ac</span></div><div class="form-actions"><button class="primary-button" type="submit">Build my rotation <svg><use href="#i-arrow"/></svg></button><button type="button" id="reset-priority" class="text-button">Reset</button></div><p id="priority-error" class="form-error" role="alert" hidden></p><p id="priority-notice" class="major-notice" role="status" hidden></p></form>
+<div class="panel-results-heading"><span id="results-count">FINDING YOUR OPTIONS</span><span id="recommendation-year">2026 OUTLOOK</span></div>
 <div id="panel-body" role="tabpanel" aria-labelledby="tab-recommendations" aria-live="polite"><div class="card-skeleton"></div></div>
 <div id="option-nav" class="option-nav" hidden aria-label="Recommendation options"><button id="previous-option" class="option-arrow" aria-label="Previous recommendation">‹</button><div class="option-position"><span id="option-count" aria-live="polite">Option 1 of 3</span><div id="option-dots" class="option-dots"></div></div><button id="next-option" class="option-arrow" aria-label="Next recommendation">›</button></div>
 </aside>
+<div class="metric-strip" id="metric-strip" aria-live="polite"><div class="metric-skeleton"></div><div class="metric-skeleton"></div><div class="metric-skeleton"></div></div>
+<div class="outlook-footnote"><svg><use href="#i-info"/></svg><span id="outlook-footnote">Future values are climate scenarios, not forecasts of actual weather. Field boundary not surveyed.</span></div>
 </div>
 <footer class="workspace-footer"><span>FieldShift <i>·</i> Harrow pilot</span><span>Regional climate. Historical trial evidence. Better-informed decisions.</span></footer>
 </main>

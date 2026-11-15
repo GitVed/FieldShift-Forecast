@@ -146,3 +146,81 @@ input[type=range]::-moz-range-thumb { box-sizing:border-box; width:17px; height:
  .rotation-card { min-height:390px; }
  #sources-dialog { padding:18px; }
 }
+/* One full-width workspace. Both primary panels share the same top and bottom. */
+.app-shell { display:block; }
+.workspace { margin-left:0; width:100%; }
+.topbar { position:relative; z-index:1200; }
+.topbar-right { display:flex; align-items:center; gap:12px; }
+.header-source-button { display:flex; align-items:center; gap:7px; padding:10px 12px; background:white; border:1px solid #e1e8dc; border-radius:9px; font:500 11px "DM Sans",sans-serif; color:#55744a; }
+.header-source-button svg { width:16px; height:16px; }
+.page-heading h1 { margin:0; }
+.page-heading { margin-bottom:22px; }
+.dashboard { align-items:stretch; row-gap:14px; }
+.explorer { display:flex; min-width:0; min-height:0; }
+.map-card { flex:1; display:flex; flex-direction:column; min-width:0; }
+.map-stage { flex:1 0 340px; height:auto; min-height:340px; }
+.map-header,.panel-intro { height:78px; min-height:78px; box-sizing:border-box; }
+.panel-intro { display:flex; align-items:center; padding:18px 22px; }
+.panel-intro h2 { margin:0; font-size:23px; }
+.layer-toolbar,.panel-tabs { height:40px; padding:4px; margin:0 16px 16px; box-sizing:border-box; }
+.panel-tab,.layer-button { padding:7px 5px; min-height:0; }
+.recommendation-panel { display:flex; flex-direction:column; align-self:stretch; max-width:none; width:100%; }
+#panel-body { display:flex; flex-direction:column; flex:1; }
+.rotation-card { flex:1; display:flex; flex-direction:column; min-height:0; }
+.rotation-card details { margin-top:auto; }
+.rotation-card .rain-advice { margin-top:18px; margin-bottom:14px; }
+.option-nav { margin-top:auto; }
+.metric-strip,.outlook-footnote { grid-column:1 / -1; }
+.metric-strip { margin-top:0; }
+.outlook-footnote { padding:0 3px; font-size:10px; }
+.major-notice { font-size:11px; line-height:1.65; padding:11px 12px; border:1px solid #e3d9c5; border-radius:8px; color:#8a7047; background:#fcf8ef; margin:11px 0 0; }
+.target-input input:disabled { background:#f7f9f3; color:#96a18b; cursor:not-allowed; }
+/* Add location is a plain dropdown form, never a modal or glass overlay. */
+.location-control { position:relative; }
+.add-location-panel { position:absolute; top:calc(100% + 9px); right:0; width:310px; max-width:calc(100vw - 28px); padding:18px; border:1px solid #dce6d4; border-radius:11px; background:white; box-shadow:0 8px 24px #173a2c12; }
+.add-location-panel h2 { font:500 21px Outfit,sans-serif; margin:0 0 16px; }
+.add-location-panel label { display:block; font-size:11px; color:#6c8260; margin-bottom:6px; }
+.add-location-panel input { display:block; width:100%; min-width:0; border:1px solid #dce5d4; border-radius:7px; padding:9px; background:white; color:#34593a; font-size:12px; }
+.coordinate-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:13px 0 15px; }
+.coordinate-fields input { margin-top:6px; }
+.location-actions { display:flex; align-items:center; gap:15px; }
+#location-form-error { font-size:11px; color:#a2644d; }
+.location-empty { margin:30px 0; padding:40px; background:white; border:1px solid #e1e8dc; border-radius:16px; }
+.location-empty h2 { font:500 27px Outfit,sans-serif; margin:0 0 13px; }
+.location-empty p { font-size:13px; color:#778b6c; line-height:1.8; margin-bottom:24px; }
+.location-empty .primary-button { display:inline-flex; }
+#sources-dialog::backdrop { backdrop-filter:none; background:#18352855; }
+@media(min-width:1600px) { .map-stage { height:auto; min-height:380px; } }
+@media(max-width:940px) {
+ .explorer,.recommendation-panel,.metric-strip,.outlook-footnote { grid-column:1; }
+ .map-stage { height:380px; flex:none; }
+ .recommendation-panel { max-width:none; }
+ .map-header,.panel-intro { height:auto; min-height:72px; }
+ .rotation-card { min-height:0; }
+}
+@media(max-width:600px) {
+ .workspace { margin-left:0; width:100%; }
+ main { padding:22px 16px 0; }
+ .topbar { padding:0 16px; }
+ .topbar-right { gap:8px; }
+ .header-source-button { padding:8px; font-size:9px; gap:4px; }
+ .header-source-button svg { width:13px; height:13px; }
+ .location-picker select { width:123px; }
+ .wordmark { font-size:24px; }
+ .panel-intro { padding:18px; }
+ .panel-intro h2 { font-size:22px; }
+ .map-stage { height:350px; min-height:350px; }
+ .layer-button { padding:6px 2px; }
+ .layer-toolbar,.panel-tabs { height:48px; margin:0 10px 12px; }
+ .location-empty { padding:24px; }
+ .outlook-footnote { font-size:9px; }
+}
+.metric-tile p { font-size:10px; }
+.metric-tile .metric-change { font-size:9px; }
+.map-caption { font-size:10px; }
+.location-picker select { max-width:220px; text-overflow:ellipsis; }
+@media(max-width:600px) { .metric-tile p { font-size:9px; } .metric-tile .metric-change { font-size:8px; } .map-caption { font-size:8px; } }
+.crop-sequence { flex:1; min-height:90px; max-height:150px; }
+.crop-step>svg { width:32px; height:36px; }
+.crop-step span { font-size:12px; }
+@media(max-width:600px) { .crop-sequence { flex:none; min-height:90px; } }

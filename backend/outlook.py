@@ -111,6 +111,19 @@ def footprint(lat,lon,dy,dx,source):
     return dict(center=[lat,lon],bounds=[[lat-dy/2,lon-dx/2],[lat+dy/2,lon+dx/2]],source=source)
 
 
+def crop_target_support():
+    """Inspect supported trial evidence instead of silently ignoring targets."""
+    from backend.rotation import load_trial_yields
+    references=load_trial_yields()
+    result={}
+    for api_name,crop in [('maize','corn'),('soybean','soybean'),('wheat','wheat')]:
+        supported=any(name==crop for (_,name) in references)
+        label={'maize':'Corn','soybean':'Soybean','wheat':'Wheat'}[api_name]
+        result[api_name]=dict(supported=supported,message='' if supported else
+            f'{label} yield targets are not available: no supported {crop} trial-yield reference is connected.')
+    return result
+
+
 @functools.lru_cache(maxsize=1)
 def timeline_data():
     observations={v:field_profile.monthly(v) for v in field_profile.FILES}
@@ -151,12 +164,13 @@ def timeline_data():
                     'NASA NEX-GDDP-CMIP6 v2, SSP370',min(values) if values else None,max(values) if values else None)
                 metrics[var]['source_ids']=[f"nex_v2_{model}_{ {'temperature':'tas','precipitation':'pr','humidity':'hurs'}[var]}_{year}" for model in model_names] if values else []
             metrics['soil_moisture']=metric(None,'soil_moisture','unavailable','Not projected',window='July, 0–10 cm')
+            metrics['soil_moisture']['unavailable_reason']='No future soil-moisture model is connected. Cached GLDAS observations end in 2025.'
         available=all(metrics[v]['value'] is not None for v in observations)
         by_year[year]=dict(year=year,kind='observed' if historical else 'projection',available=available,
             message='' if available else projection_error,model_count=len(model_names),metrics=metrics,
             footprint=power if historical else nex,soil_moisture_footprint=gldas if historical else None)
     return dict(field_id='harrow',location=dict(lat=42.0356,lon=-82.9183,name='Harrow, Ontario'),
-        years=list(by_year.values()),baseline=baseline,soil=field_profile.soil(),
+        years=list(by_year.values()),baseline=baseline,soil=field_profile.soil(),priority_crops=crop_target_support(),
         period='May–September planning window; winter-wheat water checks excluded',
         projection=dict(scenario='SSP370',models=model_info.get('models',[]),
             calibration='1991–2014 monthly change alignment to NASA POWER',comparison='2015–2025 monthly climatologies, not annual forecast skill',
@@ -265,6 +279,9 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2030),
     if need_bu is not None and not math.isfinite(need_bu):raise HTTPException(422,'Yield target must be finite')
     if need_bu is not None and not must_grow:raise HTTPException(422,'Choose a crop for the yield target')
     if must_grow and stress.normalise_crop(must_grow) is None:raise HTTPException(422,'Choose corn, soybean or wheat')
+    support=crop_target_support().get('maize' if stress.normalise_crop(must_grow)=='corn' else stress.normalise_crop(must_grow)) if must_grow else None
+    if need_bu is not None and support and not support['supported']:
+        raise HTTPException(422,support['message']+' Choose wheat without a target to view compatible rotations.')
     data=timeline_data();selected=next(r for r in data['years'] if r['year']==year)
     if not selected['available']:
         return dict(year=year,status='unavailable',rotations=[],message=selected['message'],must_grow=must_grow)
@@ -299,7 +316,7 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2030),
     below_need=profile['rain_mm']<min(suitability.FAO_WATER_NEED_MM[c][0] for c in ('maize','soybean'))
     summary=('Rain remains below the assessed crops’ lower water needs; similar dry conditions can favor the same option.' if below_need else 'Rain meets at least one assessed crop’s lower water requirement, so other evidence can change the order.')
     if must_grow:summary=f"Only rotations containing {stress.normalise_crop(must_grow)} are considered. "+summary
-    result.update(ranking_summary=summary,climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
+    result.update(target_support=support,ranking_summary=summary,climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
         model_count=selected['model_count'],message=None,
         ranking='Year-specific planning rules: priority target feasibility, pH constraints, selected-year rain coverage, sourced drought resilience when moisture or drying-demand flags apply, period GAEZ suitability and historical trial index. Rule-based, not a trained yield forecast; wheat water remains unassessed.',
         suitability_note='GAEZ is period-based suitability, not annual prediction accuracy or a probability.',
