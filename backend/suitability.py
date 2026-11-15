@@ -90,7 +90,8 @@ def water_check(crop, profile):
     if crop == "wheat":
         return {**base, "rain_mm": rain, "covers_pct": None,
                 "status": "not computed",
-                "note": "Winter wheat grows Oct-Jul, so the May-Sep rain window does not fit it."}
+                "note": ("Winter wheat is seeded late Aug to mid Oct and harvested late June to mid July "
+                         "(OMAFRA 2017, as supplied), so the May-Sep corn and soybean window does not fit it.")}
     if rain is None:
         return {**base, "rain_mm": None, "covers_pct": None, "status": "no rain data"}
     return {**base, "rain_mm": round(rain, 1),

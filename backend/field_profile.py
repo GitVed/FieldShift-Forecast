@@ -15,9 +15,11 @@ Scenario rules
             its verdict is "increasing" or "decreasing". Rain is NOT extrapolated,
             because Dev's rain trend verdict is "inconclusive".
 
-Window assumption (UNVERIFIED, Vedant to confirm against a crop calendar):
-SEASON_MONTHS = May to September is used as the growing season for temperature,
-rain and humidity. Annual values are reported too, so nothing is hidden.
+Growing window: SEASON_MONTHS = May to September, for corn and soybean only,
+from the crop calendar below. It is not used for winter wheat.
+
+Soil: HWSD2 is used for texture and pH only. Soil organic carbon comes from the
+local trial measurement, not HWSD2 (see SOIL_CARBON).
 """
 import csv
 import statistics
@@ -68,7 +70,36 @@ def _over_years(series, years, months, how):
     return statistics.mean(_season(series, y, months, how) for y in years)
 
 
+# Crop calendar. Source: OMAFRA 2017, citation as supplied by the team.
+# The document link was not recorded, so it has not been checked here.
+CROP_CALENDAR = {
+    "source": "OMAFRA 2017 (citation as supplied; link not recorded, not checked)",
+    "corn": {"seeded": "May", "harvested": "late September to early November"},
+    "soybean": {"seeded": "May", "harvested": "late September to early November"},
+    "wheat": {"seeded": "late August to mid October, previous year",
+              "harvested": "late June to mid July"},
+    "note": ("May to September is the corn and soybean growing window only. Winter wheat is in the "
+             "ground over winter and out by July, which is why it fits a rotation and frees the "
+             "field for red clover."),
+}
+
+# Soil organic carbon. HWSD2 is a global model value; the trial is a local measurement.
+SOIL_CARBON = {
+    "value": "2.0 to 2.25", "unit": "%",
+    "source": "https://www.topcropmanager.com/the-benefits-of-crop-rotation-and-diversification/",
+    "note": ("Local trial measurement after 17 years: just under 2 percent in continuous soybean, "
+             "just over 2.25 percent in soybean-winter wheat-corn (Drury, 2021). Sampling depth is "
+             "not stated in the source (0 to 20 cm is UNVERIFIED). HWSD2 global model shows about "
+             "6.6 percent for this point. We use the local measurement and do not average them. "
+             "The claim that 6.6 percent is close to uncropped woodlot Brookston soil is UNVERIFIED."),
+    "hwsd2_modelled_pct": 6.6,
+}
+
+
 def _item(value, unit, source_id, window, note="", label="CACHED"):
+    if value is not None and not isinstance(value, (int, float)):
+        return {"value": value, "unit": unit, "label": label, "source_id": source_id,
+                "window": window, "note": note}
     return {"value": None if value is None else round(value, 3), "unit": unit,
             "label": label, "source_id": source_id, "window": window, "note": note}
 
@@ -83,12 +114,17 @@ def gldas_july(depth=("0", "10")):
     return out
 
 
+SOIL_FROM_HWSD2 = ("ph", "sand", "silt", "clay")
+
+
 def soil():
-    """Topsoil (0-20 cm) from HWSD2. SoilGrids rows are all invalid at this
-    point (Dev's quality flags), so they are not used."""
+    """Topsoil (0-20 cm) texture and pH from HWSD2. SoilGrids rows are all
+    invalid at this point (Dev's quality flags). HWSD2 organic carbon and
+    nitrogen are not used; soil carbon comes from the trial (SOIL_CARBON)."""
     out = {}
     for r in _rows("hwsd_soil_harrow.csv"):
-        if r["depth_top_cm"] == "0" and r["quality_flag"] == "regional_estimate" and r["value"]:
+        if (r["depth_top_cm"] == "0" and r["quality_flag"] == "regional_estimate" and r["value"]
+                and r["variable"] in SOIL_FROM_HWSD2):
             out[r["variable"]] = _item(float(r["value"]), r["unit"], r["source_id"], "0-20 cm",
                                        "FAO HWSD2 regional mapping unit, not a field soil test",
                                        label="CACHED (regional estimate)")
@@ -168,7 +204,9 @@ def build_scenarios():
     out = {}
     for sid, clim, title in (("normal", normal, "Normal year"), ("dry", dry, f"Dry year ({DRY_YEAR} replay)"),
                              ("2035_dry", future, f"{TARGET_YEAR} dry-year stress test")):
-        prov = {**clim, **{f"soil_{k}": v for k, v in soil_items.items()}}
+        prov = {**clim, **{f"soil_{k}": v for k, v in soil_items.items()},
+                "soil_organic_carbon": _item(SOIL_CARBON["value"], "%", "trial_topcropmanager_2021",
+                                             "after 17 years", SOIL_CARBON["note"])}
         profile = {
             "label": "CACHED",
             "scenario": sid,
@@ -178,8 +216,9 @@ def build_scenarios():
             "humidity_pct": clim["humidity_pct"]["value"],
             "soil_moisture": clim["soil_moisture_july"]["value"],
             "ph": soil_items.get("ph", {}).get("value"),
-            "nitrogen": soil_items.get("total_nitrogen", {}).get("value"),
-            "soil_organic_carbon": soil_items.get("organic_carbon", {}).get("value"),
+            "nitrogen": None,              # HWSD2 nitrogen not used
+            "soil_organic_carbon": None,   # range from the trial, see provenance
+            "soil_organic_carbon_text": SOIL_CARBON["value"] + " %",
             "sand": soil_items.get("sand", {}).get("value"),
             "silt": soil_items.get("silt", {}).get("value"),
             "clay": soil_items.get("clay", {}).get("value"),

@@ -80,6 +80,17 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(self.s["normal"]["ph"], 6.7)
         self.assertIn("regional", self.s["normal"]["provenance"]["soil_ph"]["label"])
 
+    def test_soil_carbon_from_trial_not_hwsd(self):
+        p = self.s["normal"]
+        self.assertNotIn("soil_organic_carbon", p["provenance"].get("soil_soil_organic_carbon", {}))
+        self.assertNotIn("soil_organic_carbon", [k[5:] for k in p["provenance"] if k.startswith("soil_") and k != "soil_organic_carbon"])
+        self.assertEqual(p["provenance"]["soil_organic_carbon"]["value"], "2.0 to 2.25")
+        self.assertIsNone(p["nitrogen"])
+
+    def test_crop_calendar_window_is_corn_and_soy_only(self):
+        self.assertIn("OMAFRA 2017", field_profile.CROP_CALENDAR["source"])
+        self.assertIsNone(suitability.water_check("wheat", {"rain_mm": 400})["covers_pct"])
+
 
 class ApiTests(unittest.TestCase):
     @classmethod
@@ -116,13 +127,63 @@ class ApiTests(unittest.TestCase):
     def test_only_verified_yields_shown(self):
         with open(ROOT / "data" / "seed" / "harrow_trial_yields.csv", encoding="utf-8-sig", newline="") as f:
             verified = {float(r["value"]) for r in csv.DictReader(f)
-                        if r.get("verification") == "VERIFIED" and r["unit"] == "bu/ac"}
+                        if r.get("verification") in ("VERIFIED", "DERIVED") and r["unit"] == "bu/ac"}
         j = self.c.get("/api/rotation/harrow").json()
         shown = [y["bu_ac"] for rot in j["rotations"] for y in rot["yields"]] + \
                 [y["bu_ac"] for y in j["baseline"]["yields"]]
         for v in shown:
             if v is not None:
                 self.assertIn(v, verified)
+
+    def test_pilot_polygon_is_sample_and_trial_is_a_point(self):
+        j = self.c.get("/api/pilot").json()
+        self.assertEqual(j["polygon_status"], "SAMPLE")
+        self.assertEqual(j["trial_site"]["kind"], "point")
+
+    def test_trial_index_and_gains(self):
+        rots = {r["id"]: r for r in self.c.get("/api/rotation/harrow").json()["rotations"]}
+        self.assertEqual(rots["corn-soy"]["trial_gain_vs_continuous_pct"], {"maize": 30.5})
+        self.assertEqual(rots["corn-soy-wheat-clover"]["trial_gain_vs_continuous_pct"], {"maize": 43.2})
+        self.assertEqual(rots["soy-soy-wheat"]["trial_gain_vs_continuous_pct"], {"soybean": 29.3})
+        self.assertEqual(rots["corn-soy-wheat"]["trial_gain_vs_continuous_pct"]["soybean"], 56.1)
+        self.assertEqual(rots["corn-soy"]["score"], 91.1)        # 154 / 169
+        self.assertEqual(rots["soy-soy-wheat"]["score"], 82.8)   # 53 / 64
+        self.assertIn("2.25", rots["corn-soy-wheat"]["soil"])    # soil is its own line
+        self.assertEqual(rots["corn-soy"]["soil"], "not available")
+
+    def test_wheat_yield_never_invented(self):
+        j = self.c.get("/api/rotation/harrow?must_grow=wheat&need_bu=70").json()
+        self.assertTrue(j["rotations"])
+        for r in j["rotations"]:
+            self.assertTrue(all(y["bu_ac"] is None for y in r["yields"] if y["crop"] == "Wheat"))
+            self.assertIsNone(r["quantity"]["meets"])
+
+    def test_must_grow_filters_and_corn_alias(self):
+        a = self.c.get("/api/rotation/harrow?must_grow=maize").json()
+        b = self.c.get("/api/rotation/harrow?must_grow=corn").json()
+        self.assertEqual([r["id"] for r in a["rotations"]], [r["id"] for r in b["rotations"]])
+        self.assertNotIn("soy-soy-wheat", [r["id"] for r in a["rotations"]])
+        self.assertEqual(a["must_grow"], "maize")
+
+    def test_unknown_crop_gives_empty_list_and_message(self):
+        j = self.c.get("/api/rotation/harrow?must_grow=rice").json()
+        self.assertEqual(j["rotations"], [])
+        self.assertIn("No rotation", j["message"])
+
+    def test_dry_rank_first_and_drought_low_end(self):
+        rots = self.c.get("/api/rotation/harrow?must_grow=maize").json()["rotations"]
+        self.assertEqual([r["rank_dry"] for r in rots], sorted(r["rank_dry"] for r in rots))
+        diverse = [r for r in rots if r["dry"]["drought"]["applies"]]
+        self.assertTrue(diverse)
+        self.assertTrue(all(r["dry"]["drought"]["loss_reduction_low_pct"] == 14 for r in diverse))
+        for r in rots:
+            self.assertLessEqual(r["dry"]["water"]["low_pct"], r["dry"]["water"]["high_pct"])
+
+    def test_quantity_check(self):
+        rots = {r["id"]: r for r in self.c.get("/api/rotation/harrow?must_grow=maize&need_bu=160").json()["rotations"]}
+        self.assertTrue(rots["corn-soy-wheat-clover"]["quantity"]["meets"])
+        self.assertFalse(rots["corn-soy"]["quantity"]["meets"])
+        self.assertEqual(rots["corn-soy"]["quantity"]["shortfall_bu_ac"], 6.0)
 
     def test_bad_inputs(self):
         self.assertEqual(self.c.get("/api/rotation/nope").status_code, 404)

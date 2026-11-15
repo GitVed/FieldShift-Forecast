@@ -1,7 +1,12 @@
-﻿"""Model 2, Vedant. No Model 1 import or third-party dependencies.
+"""Model 2, Vedant. No Model 1 import or third-party dependencies.
 
 Rules v1 (sources and limitations: docs/EVIDENCE.md, docs/MODEL2.md):
 - evidence_only is the default: no calibrated weights, no overall percent.
+- trial_yield_index (used by the API): overall = mean over crops with a trial
+  yield of (trial yield / best trial yield for that crop) x 100. The best
+  yields are read from the CSV, not hard-coded. Crops without a verified or
+  derived yield (wheat) are left out and listed. No benefit or penalty terms.
+  Soil carbon is reported as its own line, never folded into the score.
 - sample_diversity is opt-in, entirely SAMPLE: benefit 10 points per extra
   cash-crop species; penalty 10 times same-crop transition fraction in the
   repeating cycle; clamp 0..100. Arbitrary UI weights, not research results.
@@ -66,7 +71,7 @@ def load_trial_yields(path=TRIAL_CSV):
     result = {}
     with open(path, encoding='utf-8-sig', newline='') as handle:
         for row in csv.DictReader(handle):
-            if row.get('verification') != 'VERIFIED' or row.get('unit') != 'bu/ac':
+            if row.get('verification') not in ('VERIFIED', 'DERIVED') or row.get('unit') != 'bu/ac':
                 continue
             if not row.get('source', '').startswith(('https://', 'http://')):
                 raise ValueError('Verified trial yield needs a source URL')
@@ -78,8 +83,39 @@ def load_trial_yields(path=TRIAL_CSV):
                 'source': row['source'], 'period': row['period'],
                 'note': row.get('note', ''), 'label': 'CACHED',
                 'kind': 'observed trial reference, not predicted yield',
+                'verification': row['verification'],
             }
     return result
+
+
+def load_soil_lines(path=TRIAL_CSV):
+    """{rotation: {"soc_pct": text, ...}} from verified soil organic carbon rows."""
+    out = {}
+    with open(path, encoding='utf-8-sig', newline='') as handle:
+        for row in csv.DictReader(handle):
+            if row.get('crop') != 'soil organic carbon' or row.get('verification') != 'VERIFIED':
+                continue
+            entry = out.setdefault(row['rotation'], {'source': row['source'], 'period': row['period'],
+                                                     'label': 'CACHED', 'items': []})
+            if row.get('baseline'):
+                entry['items'].append(f"plus {row['value']} percent vs {row['baseline']}")
+            else:
+                entry['items'].insert(0, f"{row['value']} percent soil organic carbon")
+    for entry in out.values():
+        entry['text'] = ', '.join(entry.pop('items')) + f" ({entry['period']})"
+    return out
+
+
+def trial_index(trial):
+    """Best trial yield per crop and each rotation's gain over continuous cropping."""
+    best, continuous = {}, {}
+    for (rot, crop), ref in trial.items():
+        if rot not in ROTATIONS:
+            continue
+        best[crop] = max(best.get(crop, 0.0), ref['value'])
+        if ROTATIONS[rot] == [crop]:
+            continuous[crop] = ref['value']
+    return best, continuous
 
 
 def load_prices(path=PRICE_JSON):
@@ -120,10 +156,12 @@ def rank_rotations(suitability, scenario='normal', label='SAMPLE', *,
         raise ValueError(f'Unsupported scenario: {scenario}')
     if label not in {'LIVE', 'CACHED', 'SAMPLE'}:
         raise ValueError('Invalid label')
-    if scoring_policy not in {'evidence_only', 'sample_diversity'}:
+    if scoring_policy not in {'evidence_only', 'sample_diversity', 'trial_yield_index'}:
         raise ValueError('Unknown scoring policy')
     suit = _normalise(suitability)
     trial, prices = load_trial_yields(trial_path), load_prices(price_path)
+    best, continuous = trial_index(trial)
+    soil_lines = load_soil_lines(trial_path)
     out = []
     for name, crops in ROTATIONS.items():
         percents = [suit.get(c, {}).get('percent') for c in crops]
@@ -136,6 +174,11 @@ def rank_rotations(suitability, scenario='normal', label='SAMPLE', *,
         raw = avg + benefit - penalty if avg is not None and sample else None
         score = None if raw is None else max(0.0, min(100.0, raw))
         refs = {c: trial.get((name, c)) for c in dict.fromkeys(crops)}
+        index_parts = {c: round(100 * refs[c]['value'] / best[c], 1) for c in refs if refs[c] and best.get(c)}
+        gains = {c: round(100 * (refs[c]['value'] - continuous[c]) / continuous[c], 1)
+                 for c in refs if refs[c] and continuous.get(c) and ROTATIONS[name] != [c]}
+        if scoring_policy == 'trial_yield_index':
+            score = round(sum(index_parts.values()) / len(index_parts), 1) if index_parts else None
         yields = {c: ref['value'] if ref else 'UNVERIFIED' for c, ref in refs.items()}
         revenue, revenue_detail = _revenue(crops, yields, prices)
         inputs = {c: suit.get(c, {'percent': None, 'source': None}) for c in dict.fromkeys(crops)}
@@ -145,15 +188,22 @@ def rank_rotations(suitability, scenario='normal', label='SAMPLE', *,
                            for e in inputs.values())
         out.append({
             'name': name, 'crops': list(crops),
-            'status': 'not scored' if missing else ('scored' if sample else 'pending rules'),
+            'status': ('scored' if score is not None else 'not scored') if scoring_policy == 'trial_yield_index'
+                      else ('not scored' if missing else ('scored' if sample else 'pending rules')),
             'not_scored_crops': missing, 'overall_percent': score,
             'breakdown': {'average_suitability': avg, 'rotation_benefit': benefit,
                           'soil_penalty': penalty, 'unclamped_percent': raw,
                           'crop_suitability': inputs, 'policy': scoring_policy,
                           'policy_source': 'SAMPLE prototype assumptions' if sample
-                          else 'No calibrated scoring weights available',
+                          else ('Trial yield / best trial yield for that crop' if scoring_policy == 'trial_yield_index'
+                                else 'No calibrated scoring weights available'),
                           'score_kind': 'prototype index, not probability of success',
-                          'climate_adjustment': 1.0, 'rotation_multiplier': 1.0},
+                          'climate_adjustment': 1.0, 'rotation_multiplier': 1.0,
+                          'trial_index_by_crop': index_parts,
+                          'trial_index_excluded': [c for c in refs if c not in index_parts],
+                          'trial_best_yield': {c: best[c] for c in index_parts},
+                          'trial_gain_vs_continuous_pct': gains},
+            'soil': soil_lines.get(name),
             'yield_bu_ac': yields, 'yield_references': refs,
             'revenue_per_ac': revenue, 'revenue_detail': revenue_detail,
             'scenario': scenario, 'label': 'SAMPLE' if sample or sample_input else label,

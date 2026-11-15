@@ -20,14 +20,28 @@ Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:a
 - Frontend wired to the API. Plan reloads per scenario. Real POWER cells and the trial site on the map
 - README demo script rewritten so every claim matches what the build produces
 
-**Still open, needs a person**
-1. Corn and wheat trial yields with a citable source. Without them most rotation cards show "not available"
-2. Rotation benefit and soil penalty weights with a source. Without them the overall score stays pending
-3. Soil carbon: HWSD2 shows about 6.6 percent, the trial shows 2 to 2.25 percent. Explain or pick one
-4. A crop calendar source for the May to September window
-5. A real field polygon, or keep the SAMPLE polygon and say so
-6. Pitch angle, slides and submission
-7. Team check, then merge `ved/model` to main
+**Done Sat night**
+- Corn yields from Top Crop Manager (Drury, 2021-07-30): 118, 154, 169. Corn-soy-wheat 164 is DERIVED (169 minus the stated 5 bu/ac from red clover). Soybean 41, 53, 64 from the Drury interview
+- Trial yield index score, trial gains over continuous cropping, and a separate soil carbon line
+- Soil carbon uses the trial measurement (2.0 to 2.25 percent), not HWSD2 (6.6 percent). HWSD2 is texture and pH only
+- Crop calendar note (OMAFRA 2017, as supplied). May to September is the corn and soybean window only
+- Field polygon labelled SAMPLE. Trial site is a point
+- Angle "you pick the crop, we stress-test it": Phase A (picker, filter, dry rank), Phase B (need X bu/ac check), Phase C (soil line on each card)
+
+**API for the angle, new query params on `/api/rotation/harrow`**
+- `must_grow`: soybean, maize or wheat (`corn` also works). Filters to rotations with that crop. Unknown crop gives an empty list and a `message`
+- `need_bu`: your bu/ac target for that crop. Each rotation gets a `quantity` with yes, or no and the shortfall. Wheat is not available
+- Rotations come back ranked by the 2012 dry year (`rank` = `rank_dry`), with `rank_normal` beside it
+- Only new fields were added. Nothing in Shlok's shape was renamed or removed. See README section 5
+
+**Still UNVERIFIED or not available (owner: you)**
+1. Wheat yields: not in any checked source, so they show not available
+2. Corn yield period: the article gives no period for the 2001-trial corn figures
+3. Soil carbon sampling depth (0 to 20 cm) and the "woodlot about 6 percent" comparison: not in the source
+4. OMAFRA 2017 crop calendar: link not recorded, not checked
+5. "Diverse means corn plus two other crops" for the drought evidence: our reading of Bowles et al.
+6. A real field polygon, if one is wanted. The SAMPLE polygon stays until then
+7. Pitch slides and submission, then merge `ved/model` to main
 
 ---
 

@@ -1,4 +1,4 @@
-﻿import copy
+import copy
 import csv
 import json
 from pathlib import Path
@@ -79,7 +79,10 @@ class RotationTests(unittest.TestCase):
     def test_trial_reference_not_uplifted_twice(self):
         row = by_name(self.sample())['corn-soy-wheat']
         self.assertEqual(row['yield_bu_ac']['soybean'], 64)
-        self.assertEqual(row['yield_bu_ac']['corn'], 'UNVERIFIED')
+        # Corn 164 is derived in the CSV (169 minus the stated 5 bu/ac red clover effect).
+        self.assertEqual(row['yield_bu_ac']['corn'], 164)
+        self.assertEqual(row['yield_references']['corn']['verification'], 'DERIVED')
+        self.assertEqual(row['yield_bu_ac']['wheat'], 'UNVERIFIED')
         self.assertEqual(row['breakdown']['rotation_multiplier'], 1)
         self.assertEqual(row['yield_references']['soybean']['label'], 'CACHED')
 
@@ -93,7 +96,7 @@ class RotationTests(unittest.TestCase):
     def test_no_partial_rotation_revenue(self):
         row = by_name(self.sample())['corn-soy-wheat']
         self.assertIsInstance(row['revenue_per_ac'], str)
-        self.assertEqual(row['revenue_detail']['missing_yields'], ['corn','wheat'])
+        self.assertEqual(row['revenue_detail']['missing_yields'], ['wheat'])  # wheat has no sourced yield
 
     def test_annual_revenue_counts_each_year(self):
         prices = {c: {'value': v, 'unit': 'CAD/bu', 'currency': 'CAD',

@@ -17,11 +17,12 @@ import csv
 import functools
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
-from backend import field_profile, rotation, suitability
+from backend import field_profile, rotation, stress, suitability
 from backend.provenance import load_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +31,7 @@ FIELD_ID = "harrow"
 SCENARIOS = ("normal", "dry", "2035_dry")
 SCENARIO_ALIASES = {"future": "2035_dry"}          # Shlok's predict id
 PREDICT_IDS = {"normal": "normal", "dry": "dry", "2035_dry": "future"}
-TRIAL_SITE = {"lat": 42.2167, "lon": -82.7333,
+TRIAL_SITE = {"lat": 42.2167, "lon": -82.7333, "dms": "42 deg 13 min N, 82 deg 44 min W", "kind": "point",
               "source": "https://acsess.onlinelibrary.wiley.com/doi/10.1002/saj2.20000",
               "note": "Woodslee trial site, about 25 km from the pilot point, in a different NASA POWER cell."}
 POWER_CELL_SIZE = (0.5, 0.625)  # degrees lat, lon; POWER file header "0.5 x 0.625 degree lat/lon region"
@@ -120,6 +121,9 @@ def pilot():
         "polygon": fx["polygon"],
         "layers": layers,
         "trial_site": TRIAL_SITE,
+        "polygon_status": "SAMPLE",
+        "polygon_note": ("SAMPLE polygon centred on Harrow 42.0356, -82.9183, Brookston clay loam. "
+                         "Not a surveyed field boundary."),
     }
 
 
@@ -219,6 +223,7 @@ ROTATION_DISPLAY = {
 }
 BASELINE_ROTATIONS = ("continuous soybean", "continuous corn")
 CROP_DISPLAY = {"corn": "Corn", "soybean": "Soy", "wheat": "Wheat"}
+NOT_AVAILABLE = "not available"
 
 
 def _yields(result):
@@ -226,11 +231,13 @@ def _yields(result):
     for crop in dict.fromkeys(result["crops"]):
         ref = (result.get("yield_references") or {}).get(crop)
         if ref:
-            out.append({"crop": CROP_DISPLAY[crop], "bu_ac": ref["value"], "status": "CACHED",
-                        "source": f"{ref['source']} ({ref['period']})"})
+            derived = ref.get("verification") == "DERIVED"
+            out.append({"crop": CROP_DISPLAY[crop], "bu_ac": ref["value"],
+                        "status": "DERIVED" if derived else "CACHED",
+                        "source": f"{ref['source']} ({ref['period']})" + (f". {ref['note']}" if derived else "")})
         else:
             out.append({"crop": CROP_DISPLAY[crop], "bu_ac": None, "status": "UNVERIFIED",
-                        "source": "No verified yield for this crop in this rotation (docs/EVIDENCE.md)"})
+                        "source": "No verified trial yield for this crop in this rotation"})
     return out
 
 
@@ -242,51 +249,107 @@ def _revenue(result):
 def _reason(result, scenario):
     b = result["breakdown"]
     parts = []
+    if result["overall_percent"] is not None:
+        idx = ", ".join(f"{CROP_DISPLAY[c]} {v:g}" for c, v in b["trial_index_by_crop"].items())
+        parts.append(f"Trial yield index {result['overall_percent']:g} ({idx}; 100 = best trial yield for that crop).")
+        if b["trial_index_excluded"]:
+            parts.append("Not in the index, no trial yield: "
+                         + ", ".join(CROP_DISPLAY[c] for c in b["trial_index_excluded"]) + ".")
+    gains = b.get("trial_gain_vs_continuous_pct") or {}
+    if gains:
+        parts.append("Trial gain over continuous cropping: "
+                     + ", ".join(f"{CROP_DISPLAY[c]} {g:+g} percent" for c, g in gains.items()) + ".")
     if b["average_suitability"] is not None:
-        parts.append(f"Average crop suitability {b['average_suitability']:.1f} (GAEZ index, {scenario} view).")
-    else:
-        parts.append("Not scored: a crop in this rotation has no suitability value.")
+        parts.append(f"Average GAEZ suitability {b['average_suitability']:.1f} ({scenario} view).")
     rev = result["revenue_per_ac"]
     if not isinstance(rev, (int, float)):
         parts.append(f"Revenue: {rev}.")
-    parts.append("No overall score: rotation benefit and soil penalty weights are not calibrated "
-                 "(Model 2 evidence-only policy).")
     return " ".join(parts)
 
 
 @app.get("/api/rotation/{field_id}")
-def rotation_scores(field_id: str, scenario: str = Query("normal")):
+def rotation_scores(field_id: str, scenario: str = Query("normal"),
+                    must_grow: Optional[str] = Query(None, description="soybean, maize (corn) or wheat"),
+                    need_bu: Optional[float] = Query(None, gt=0, description="bu/ac target for the must_grow crop")):
     _field(field_id)
     scenario = _scenario(scenario)
-    suit = suitability.score_crops(profiles()[scenario], scenario)
-    results = {r["name"]: r for r in rotation.rank_rotations(suit, scenario=scenario, label="CACHED")}
-    rotations = []
+    ps = profiles()
+    suit = suitability.score_crops(ps[scenario], scenario)
+    suit_normal = suitability.score_crops(ps["normal"], "normal")
+    suit_dry = suitability.score_crops(ps["dry"], "dry")
+    results = {r["name"]: r for r in rotation.rank_rotations(suit, scenario=scenario, label="CACHED",
+                                                              scoring_policy="trial_yield_index")}
+    evidence = stress.drought_evidence()
+    crop = stress.normalise_crop(must_grow) if must_grow else None
+
+    rotations, message = [], None
     for name, (rid, display, crops) in ROTATION_DISPLAY.items():
         res = results[name]
+        if must_grow and (crop is None or crop not in res["crops"]):
+            continue
         rotations.append({
             "id": rid, "name": display, "crops": crops,
-            "rank": res["rank"], "score": res["overall_percent"],
+            "rank": None, "score": res["overall_percent"],
             "soil_score": None, "water_score": None,
             "revenue": _revenue(res), "profit": None,
             "yields": _yields(res), "reason": _reason(res, scenario),
             "status": "CACHED",
+            # New fields (additive):
+            "rank_normal": None, "rank_dry": None,
+            "score_kind": "trial yield index: trial yield / best trial yield for that crop x 100",
+            "trial_gain_vs_continuous_pct": {stress.MODEL2_TO_API[c]: g for c, g in
+                                             res["breakdown"]["trial_gain_vs_continuous_pct"].items()},
+            "normal": {"water": stress.water_range(res["crops"], suit_normal),
+                       "label": "1991-2020 normal year"},
+            "dry": {"water": stress.water_range(res["crops"], suit_dry),
+                    "drought": stress.drought_line(res["crops"], evidence),
+                    "label": "2012 dry year: 109 mm less May-Sep rain, 1.75 C warmer than normal"},
+            "soil": res["soil"]["text"] if res.get("soil") else NOT_AVAILABLE,
+            "soil_source": res["soil"]["source"] if res.get("soil") else None,
+            "quantity": stress.quantity(crop, need_bu, res.get("yield_references")),
         })
+    if must_grow and crop is None:
+        message = f"No rotation in our trial data includes '{must_grow}'. Choose soybean, maize or wheat."
+    elif must_grow and not rotations:
+        message = f"No rotation in our trial data includes {must_grow}."
+
+    normal_order = sorted(rotations, key=lambda r: (r["score"] is None, -(r["score"] or 0)))
+    for i, r in enumerate(normal_order, 1):
+        r["rank_normal"] = i if r["score"] is not None else None
+    dry_ranks = stress.dry_rank(rotations)
+    for r in rotations:
+        r["rank_dry"] = dry_ranks[r["id"]]
+        r["rank"] = r["rank_dry"]
+    rotations.sort(key=lambda r: r["rank_dry"])
+
     baseline_yields = []
     for name in BASELINE_ROTATIONS:
-        for y in _yields(results[name]):
-            baseline_yields.append({**y, "crop": f"Continuous {y['crop'].lower()}"})
+        res = results[name]
+        for y in _yields(res):
+            baseline_yields.append({**y, "crop": f"Continuous {y['crop'].lower()}",
+                                    "soil": res["soil"]["text"] if res.get("soil") else NOT_AVAILABLE,
+                                    "quantity": stress.quantity(crop, need_bu, res.get("yield_references"))
+                                    if crop in res["crops"] else None})
     prices = rotation.load_prices()
     price_note = ", ".join(f"{c} {p['value']:.2f} CAD/bu" for c, p in prices.items())
     first = next(iter(prices.values()))
     return {
         "status": "CACHED",
         "prices_verified": True,
-        "method": (f"Scenario: {scenario}. Suitability is the GAEZ index (Model 1). Yields are verified trial "
-                   f"references only, from the Woodslee trial about 25 km from the pilot point. Prices: "
-                   f"{price_note}, {first['period']} Ontario averages ({first['source']}). "
-                   "Revenue is gross and shown only when every crop yield is verified. No profit: costs are not verified."),
+        "method": (f"Scenario: {scenario}. Ranked by the 2012 dry year first. Score is the trial yield index. "
+                   "Trial yields come from the long-term rotation trial at Woodslee, about 25 km from the pilot "
+                   f"point. Prices: {price_note}, {first['period']} Ontario averages ({first['source']}). "
+                   "Revenue is gross and shown only when every crop yield is available. No profit: costs not verified."),
         "rotations": rotations,
         "baseline": {"id": "continuous", "name": "Continuous cropping comparator", "yields": baseline_yields},
+        # New fields (additive):
+        "must_grow": stress.MODEL2_TO_API.get(crop) if crop else (must_grow or None),
+        "need_bu": need_bu,
+        "message": message,
+        "ranking": ("rank = rank_dry. Dry rank orders by drought-year evidence (low end of Bowles et al. 2020), "
+                    "then the 2012 water-cover low, then the trial yield index. rank_normal orders by the index."),
+        "crop_calendar": field_profile.CROP_CALENDAR,
+        "soil_carbon": field_profile.SOIL_CARBON,
     }
 
 
