@@ -12,6 +12,10 @@
 
 ---
 
+## Run the dashboard
+
+Run `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --host 127.0.0.1 --port 8765`, then open `http://localhost:8765/`. The dashboard is Dev's map-first design with a 2021 to 2040 timeline: observed history to 2025, then five NASA climate models (SSP370). Rotations are ordered by trial evidence first; rain is a check. Future values are climate scenarios, not weather forecasts. Trial yields are historical. See [frontend run and test instructions](docs/NEW_FRONTEND.md) and [dataset sources](RESOURCES.md).
+
 ## 1. Project summary
 
 FieldShift Forecast helps a farmer choose the right crop rotation for the future, not just for last year.
