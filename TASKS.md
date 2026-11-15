@@ -8,7 +8,7 @@ Last updated Sat Nov 14, evening. Building closes 6 PM tonight. After that we wo
 
 ## Status, Sat evening
 
-Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 100 tests pass. It is not on main yet.
+Everything is integrated on `ved/model`: `dev/data`, `vedant/model2` and `shlok/front` are merged in. 109 tests pass. It is not on main yet.
 
 Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:app --port 8765`, then open http://localhost:8765/frontend/?api=1
 
@@ -72,6 +72,15 @@ Run it: `pip install -r requirements.txt`, then `python -m uvicorn backend.app:a
 - Dev's ranking text said rain-led. Changed to trial evidence first, rain is a check
 - Wheat targets stay supported through the long-term trial. Two of Dev's tests updated to the decided rules
 - 99 tests and the browser check pass
+
+**Done Sun (final merge, before main)**
+- `devs/new-frontend` (5ac4ccf) merged into `ved/model` with git. `vedant/model2`, `dev/data` and `shlok/front` were already fully merged. Backups: `backup/ved-model-2026-11-15-before-merge` (fd1401d), `backup/devs-new-frontend-2026-11-15-5ac4ccf`
+- Cowork problems 1 to 5: all 4 rotations shown, score basis per crop, 2012 dry-year rank beside the trial score, rain range explained with no 100% cap, watermelon GAEZ note
+- Demo fixes: wheat tie (both 62.5, same 4.2 t/ha) said on the card and ordered by the rest-of-rotation trial score; "only 4 rotations" note; wheat shows 62.5 not 63; My crop note that trial yields stay the same 2021 to 2040; a bar showing where your target falls
+- Corn targets in 2026 to 2040 are also checked against the DERIVED climate range (P2 model unchanged)
+- New `tests/test_crop_target_year_matrix.py`: corn, soybean, wheat x targets 50, 60, 90, 160, 170, 200 x years 2021, 2026, 2035, 2040
+- 109 tests and Dev's browser check pass, desktop, mobile and offline
+- Next: Dev, Shlok and Vedant pull `ved/model`, run it and say it works. Then merge to main
 
 **Still UNVERIFIED or not available (owner: you)**
 1. Corn yield period: the Top Crop Manager article gives no period for the 2001-trial corn figures

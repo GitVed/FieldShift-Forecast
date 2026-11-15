@@ -247,7 +247,9 @@ def rank_annual_options(rows,crop_sequences,selected,baseline,soil):
         trial=picked if picked is not None else row['score']
         # Coverage is capped at the sourced lower water-need bound; no bonus for
         # excess rain. Unassessed wheat is never treated as a zero-water crop.
-        key=(target_group,target_gap,-(trial if trial is not None else -1),ph_failures,
+        # A tie on the picked crop (wheat 62.5 in both corn-soy-wheat rotations, the same
+        # 4.2 t/ha in Agomoh et al. 2020) is broken by the trial score of the whole rotation.
+        key=(target_group,target_gap,-(trial if trial is not None else -1),-(row['score'] if row['score'] is not None else -1),ph_failures,
              -(rain_fit if rain_fit is not None else -1),-resilience,-gaez_fit,row['id'])
         keys[row['id']]=key
         row['planning_score']=round(rain_fit,1) if rain_fit is not None else None
@@ -343,7 +345,40 @@ def recommendations(field_id:str,year:int=Query(2026,ge=2021,le=2040),
     below_need=profile['rain_mm']<min(suitability.FAO_WATER_NEED_MM[c][0] for c in ('maize','soybean'))
     summary='Ordered by trial evidence first. '+('This year’s rain is below the lower water need of the assessed crops, so check water before you commit.' if below_need else 'This year’s rain meets at least one assessed crop’s lower water need.')+' Rain is a check, not the ranking.'
     if must_grow:summary=f"Only rotations containing {stress.normalise_crop(must_grow)} are considered. "+summary
-    result.update(target_support=support,ranking_summary=summary,climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
+    rows=result['rotations'];crop=stress.normalise_crop(must_grow) if must_grow else None
+    label={'corn':'corn','soybean':'soybean','wheat':'wheat'}.get(crop)
+    # Ties on the picked crop's trial yield, said out loud instead of hidden.
+    for row in rows:
+        row['tie_note']=None
+        if crop and row.get('picked_crop_yield_bu_ac') is not None:
+            same=[r for r in rows if r is not row and r.get('picked_crop_yield_bu_ac')==row['picked_crop_yield_bu_ac']]
+            if same:
+                row['tie_note']=(f"Tie on {label}: {row['picked_crop_yield_bu_ac']:g} bu/ac here and in "
+                                 +', '.join(r['name'] for r in same)+". Same trial figure, so the order between them follows the trial score of the whole rotation.")
+    # Corn target against the DERIVED climate range for a projected year (P2 corn model, unchanged).
+    for row in rows:
+        q=row.get('quantity');adj=row.get('climate_adjustment')
+        if q and crop=='corn' and adj and need_bu is not None:
+            # Whole bushels, the same rounding the card's climate note uses, so the two always agree.
+            lo,hi=round(adj['low_bu_ac']),round(adj['high_bu_ac'])
+            where='above the whole range' if need_bu>hi else 'below the whole range' if need_bu<lo else 'inside the range'
+            q['climate_range_check']=dict(year=year,low_bu_ac=lo,high_bu_ac=hi,position=where,status='DERIVED',
+                text=f"{year} climate-adjusted corn {lo:g} to {hi:g} bu/ac across {adj['models']} NASA models. Your {need_bu:g} is {where}.")
+    # Where the target falls among the trial figures for that crop.
+    target_position=None
+    if crop and need_bu is not None:
+        figs=sorted(((r['quantity']['best_bu_ac'],r['name']) for r in rows if r.get('quantity') and r['quantity'].get('best_bu_ac') is not None),reverse=True)
+        if figs:
+            above=[f for f in figs if f[0]>=need_bu];below=[f for f in figs if f[0]<need_bu]
+            if not below:text=f"Your {need_bu:g} bu/ac is at or below every {label} figure. The lowest is {figs[-1][0]:g} ({figs[-1][1]})."
+            elif not above:text=f"Your {need_bu:g} bu/ac is above every {label} figure. The highest is {figs[0][0]:g} ({figs[0][1]})."
+            else:text=f"Your {need_bu:g} bu/ac falls between {above[-1][0]:g} ({above[-1][1]}) and {below[0][0]:g} ({below[0][1]})."
+            target_position=dict(target_bu_ac=need_bu,crop=label,figures=[dict(name=n,bu_ac=v,meets=v>=need_bu) for v,n in figs],
+                low_bu_ac=figs[-1][0],high_bu_ac=figs[0][0],text=text+' Best trial or long-term figure per rotation. Historical, not a forecast.')
+    count_note=(f"Only {len(rows)} trial rotations{(' include '+label) if crop else ''}. These are the rotations with Harrow trial yields. Other crops have suitability only, in the Other crops tab.")
+    year_note=('Trial yields are historical, so they stay the same from 2021 to 2040. The year changes the rain check'
+               +(', and from 2026 the climate range for corn in rotations that grow it' if any('corn' in sequences[r['id']] for r in rows) else '')+'.')
+    result.update(target_support=support,target_position=target_position,rotation_count_note=count_note,year_note=year_note,ranking_summary=summary,climate_context=context,year=year,status='CACHED' if year<=2025 else 'PROJECTED',climate_kind=selected['kind'],
         model_count=selected['model_count'],message=None,
         ranking='Trial evidence first: target support, then the trial yield of your crop or the trial yield index, then pH, then the selected year rain fit, sourced drought resilience and period GAEZ suitability. Rule-based, not a trained yield forecast.',
         suitability_note='GAEZ is period-based suitability, not annual prediction accuracy or a probability.',

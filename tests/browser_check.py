@@ -87,6 +87,11 @@ def run(url,historical_preview=False):
                 expect(page.locator('#priority-notice')).to_be_hidden()
                 page.locator('#yield-target').fill('90');page.locator('#priority-form [type=submit]').click()
                 expect(page.locator('.target-check').first).to_contain_text('long-term average')
+                expect(page.locator('.rotation-card')).to_contain_text('62.5')  # not rounded to 63
+                expect(page.locator('.rotation-card .tie-note')).to_contain_text('Tie on wheat')
+                expect(page.locator('#target-summary .target-position')).to_contain_text('above every wheat figure')
+                expect(page.locator('#panel-note')).to_contain_text('Only 3 trial rotations include wheat')
+                expect(page.locator('#panel-note')).to_contain_text('2021 to 2040')
             for card in page.locator('.rotation-card').all():assert label in card.locator('.crop-sequence').inner_text()
         page.locator('[data-crop="maize"]').click();page.locator('#yield-target').fill('150');page.locator('#priority-form [type=submit]').click()
         expect(page.locator('.target-check').first).to_be_visible()
