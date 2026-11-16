@@ -12,7 +12,7 @@ The scoring is transparent, not a black box. Every number shows its source and a
 
 The tool does not predict bushels in general, except for a labelled DERIVED corn climate range, 145 to 173 bu/ac in 2028, with the 2012 miss shown on screen.
 
-> Screenshot: to be added.
+![FieldShift Forecast dashboard for the Harrow, Ontario pilot](docs/images/dashboard.png)
 
 ## The problem
 
@@ -29,6 +29,25 @@ The tool does not predict bushels in general, except for a labelled DERIVED corn
 - Event: NASA Space Apps Challenge 2026, Toronto
 - Challenge: Field Shift, Adapting Farms with NASA Data
 - Team Tuxedo: Vedant Soni, Ved Patel, Shlok Mehta, Dev Patel
+
+## Project structure
+
+```
+Tuxedo/
+├── backend/          FastAPI app, Model 1, Model 2, trend and climate code
+├── frontend/         Dashboard (HTML, CSS, JavaScript, bundled Leaflet and fonts)
+├── data/
+│   ├── seed/         Cached datasets the app reads
+│   ├── source/       Cached daily NASA records
+│   └── metadata/     Download and validation records
+├── docs/             Evidence, method and data source notes, screenshot
+├── scripts/          One-time data fetch scripts (not needed to run the app)
+├── tests/            pytest suite and browser check
+├── Dockerfile
+├── LICENSE
+├── docker-compose.yml
+└── requirements.txt
+```
 
 ## What we built
 
@@ -73,19 +92,6 @@ Yields are historical trial values from the AAFC Harrow trial at Woodslee. They 
 **How the year changes the list.** Each year is checked against NASA rain. If May to September rain falls in the driest third of 1991 to 2020, the year is "dry-leaning" and the list uses the 2012 dry-year order. Otherwise it uses the trial evidence order. Observed years use NASA POWER rain. Future years use a vote of the five climate models. Trial yields never change with the year.
 
 **Corn climate range.** For corn only, a model fitted on Essex County yields and NASA POWER weather gives a climate-adjusted range in future years. It is labelled DERIVED. Soybean and wheat did not beat "no change" in testing, so they get no adjustment.
-
-## Honest limits
-
-- The trial is at Woodslee, about 26 km from the sample field, in a different NASA POWER grid cell. Trial numbers are evidence for the area, not a yield promise for this field.
-- The field is a 300 m sample square of cropland from ESA WorldCover, not a surveyed farm field.
-- Scores are only comparable between rotations scored on the same crops. Each card says which crops its score uses.
-- Revenue is gross revenue only. There are no costs and no profit figure.
-- Soil moisture is not projected into the future. No soil-moisture projection is connected.
-- The drought result behind the 2012 dry-year order (Bowles et al. 2020) comes from US sites, not Harrow.
-- Soil texture and pH are SoilGrids modelled values, not a field soil test.
-- Winter wheat grows outside May to September, so its water check is not computed.
-
-More detail is in [docs/EVIDENCE.md](docs/EVIDENCE.md) and [docs/VERIFY.md](docs/VERIFY.md).
 
 ## Tech stack
 
@@ -172,25 +178,6 @@ All routes return JSON. Interactive docs are at http://localhost:8765/docs while
 | `GET /api/trend/{cell_id}` | Trend test results for a climate cell |
 | `GET /api/series/{cell_id}` | Monthly climate series for a climate cell |
 
-## Project structure
-
-```
-Tuxedo/
-├── backend/          FastAPI app, Model 1, Model 2, trend and climate code
-├── frontend/         Dashboard (HTML, CSS, JavaScript, bundled Leaflet and fonts)
-├── data/
-│   ├── seed/         Cached datasets the app reads
-│   ├── source/       Cached daily NASA records
-│   └── metadata/     Download and validation records
-├── docs/             Evidence, method and data source notes
-├── scripts/          One-time data fetch scripts (not needed to run the app)
-├── tests/            pytest suite and browser check
-├── Dockerfile
-├── LICENSE
-├── docker-compose.yml
-└── requirements.txt
-```
-
 ## Data sources and licences
 
 - NASA POWER, GPM IMERG, GLDAS and NEX-GDDP-CMIP6: public domain, source cited
@@ -203,12 +190,6 @@ Tuxedo/
 - Kaggle datasets (Other crops climate check only): as per each dataset's Kaggle licence
 
 Every dataset, link and check is listed in [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
-
-## AI use disclosure
-
-AI tools were used to research datasets, evaluate ideas, and help plan and build. The final solution direction and decisions were made by Team Tuxedo.
-
-AI tools used: Muse, ChatGPT, Claude. AI was used for dataset research, idea evaluation, build planning, and code assistance. AI was not used to submit the project on behalf of the team. Generated code and data are acknowledged in the submission. No NASA branding is used in AI-generated content. AI-generated images or video, if any, are watermarked.
 
 ## Team and license
 
