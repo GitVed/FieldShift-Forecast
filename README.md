@@ -106,8 +106,8 @@ Yields are historical trial values from the AAFC Harrow trial at Woodslee. They 
 You need Python 3.11 and git.
 
 ```bash
-git clone https://github.com/GitVed/Tuxedo.git
-cd Tuxedo
+git clone https://github.com/GitVed/FieldShift-Forecast.git
+cd FieldShift-Forecast
 ```
 
 Create and activate a virtual environment.
