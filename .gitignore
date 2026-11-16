@@ -12,3 +12,12 @@ __pycache__/
 data/raw/
 *.pyc
 .tools/
+
+# Test, tool and editor files
+.pytest_cache/
+venv/
+env/
+.vscode/
+.idea/
+Thumbs.db
+*.log

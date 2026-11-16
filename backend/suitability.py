@@ -116,7 +116,7 @@ def ph_check(crop, profile):
 
 def score_crops(profile, scenario="normal", gaez=None, gaez_future=None):
     """Return {crop: dict(percent, source, label, gaez_baseline, scenario_applied,
-    note, checks)}. Contract with Model 2 (TASKS.md V3) is unchanged."""
+    note, checks)}. Contract with Model 2 (docs/MODEL2.md) is unchanged."""
     if scenario not in SCENARIOS:
         raise ValueError(f"scenario must be one of {SCENARIOS}")
     gaez = load_gaez() if gaez is None else gaez

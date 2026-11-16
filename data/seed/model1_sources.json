@@ -35,7 +35,7 @@
     {
       "file": "data/seed/harrow_trial_yields.csv",
       "name": "AAFC Harrow rotation trial numbers, hand copied",
-      "request_url": "UNVERIFIED. Copied from SUMMARY-README.md section 5. Vedant to add the AAFC source link (VS1).",
+      "request_url": "UNVERIFIED. Copied from early planning notes with no AAFC source link. See docs/EVIDENCE.md for the checked sources.",
       "retrieved": "UNVERIFIED",
       "units": "bu/ac or percent, per row",
       "licence": "AAFC. Cite Dr. Craig Drury, AAFC Harrow."

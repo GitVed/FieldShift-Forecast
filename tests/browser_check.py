@@ -1,7 +1,7 @@
 """Exercise the real frontend with Chromium.
 
 python tests/browser_check.py --url http://127.0.0.1:8001
-Requires requirements-dev.txt and python -m playwright install chromium.
+Requires requirements.txt and python -m playwright install chromium.
 Artifacts are written only to ignored .cache/browser/.
 """
 import argparse
